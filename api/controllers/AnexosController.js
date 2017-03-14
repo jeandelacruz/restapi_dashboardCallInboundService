@@ -10,8 +10,6 @@ const dateFormat = require('dateformat');
 module.exports = {
 	
 	set_anexo: function(req, res) {
-		res.header("Access-Control-Allow-Origin", "*");
-  		res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   		if(!req.param('user_id') || !req.param('anexo')){
 		    res.send(
 		    	unflatten({
