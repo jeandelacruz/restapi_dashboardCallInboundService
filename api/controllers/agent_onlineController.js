@@ -9,13 +9,14 @@ module.exports = {
   delete: function (req, res) {
     let numberAnnexed = req.param('number_annexed')
     console.log('Removing agent on the dashboard: ' + numberAnnexed)
-    agent_online.destroy({number_annexed: numberAnnexed}).exec(function (err) {
-      if (err) {
-        return res.send(err)
-        sails.log(err)
-      }
+    agent_online.destroy({number_annexed: numberAnnexed})
+    .then(function () {
       sails.log('The agent has been remove from the dashboard.')
-      return res.send(numberAnnexed)
+      return res.json(numberAnnexed)
+    })
+    .catch(function (err) {
+      return res.json(err)
+      sails.log(err)
     })
   },
 
@@ -25,14 +26,14 @@ module.exports = {
       status_pause: req.param('status_pause')
     }
     console.log('Updating agent on the dashboard : ' + req.param('status_pause'))
-    agent_online.update({number_annexed: numberAnnexed}, dataUpdate).exec(function (err, updated) {
-      if (err) {
-        return res.send(err)
-        sails.log(err)
-      }
+    agent_online.update({number_annexed: numberAnnexed}, dataUpdate)
+    .then(function () {
       sails.log('The agent has been update from the dashboard.')
-      return res.send(updated[0])
+      return res.json(updated[0])
+    })
+    .catch(function (err) {
+      return res.json(err)
+      sails.log(err)
     })
   }
 }
-

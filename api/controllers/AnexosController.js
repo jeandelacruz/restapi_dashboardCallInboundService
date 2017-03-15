@@ -29,9 +29,8 @@ module.exports = {
         }
       }
 
-      Anexos.find(query).exec(function (err, records) {
-        if (err) res.send({Response: 'error', Message: 'Fail Search Event'})
-
+      Anexos.find(query)
+      .then(function (records) {
         if (req.param('type_action') == 'disconnect' || req.param('type_action') == 'release') {
           var user_id = '0'
           var parameterSearch = { user_id: req.param('user_id') }
@@ -46,13 +45,13 @@ module.exports = {
             updated_at: dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
           }
 
-          Anexos.update(parameterSearch, query).exec(function (err, records) {
+          return Anexos.update(parameterSearch, query)
+          .then(function () {
+          	return res.json({ Response: 'success', Message: 'Updated Anexo' })
+          })
+          .catch(function (err) {
             sails.log(err)
-            if (err) {
-              res.send({ Response: 'error', Message: 'Fail Updated Anexo' })
-            } else {
-              res.send({ Response: 'success', Message: 'Updated Anexo' })
-            }
+            return res.json({ Response: 'error', Message: 'Fail Updated Anexo' })
           })
         } else {
           let query = {
@@ -61,10 +60,17 @@ module.exports = {
               id: records[0].user_id
             }
           }
-          Users.findOne(query).populate('anexo').exec(function (err, record) {
-            res.send({ Response: 'warning', Message: 'El anexo ' + req.param('anexo') + ' ya se encuentra en uso ' + record.primer_nombre + ' ' + record.segundo_nombre + ' ' + record.apellido_paterno + ' ' + record.apellido_materno })
+          return Users.findOne(query).populate('anexo')
+          .then(function (record) {
+          	return res.json({ Response: 'warning', Message: 'El anexo ' + req.param('anexo') + ' ya se encuentra en uso ' + record.primer_nombre + ' ' + record.segundo_nombre + ' ' + record.apellido_paterno + ' ' + record.apellido_materno })
+          })
+          .catch(function (err) {
+          	return res.json({ Response: 'error', Message: 'Fail Search User' })
           })
         }
+      })
+      .catch(function (err) {
+      	return res.json({Response: 'error', Message: 'Fail Search Event'})
       })
     }
   }
