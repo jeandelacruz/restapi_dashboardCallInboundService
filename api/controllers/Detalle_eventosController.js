@@ -5,6 +5,7 @@
  * @help        :: See http://sailsjs.org/#!/documentation/concepts/Controllers
  */
 const dateFormat = require('dateformat')
+const AnexosController = require('./AnexosController')
 
 module.exports = {
 
@@ -12,27 +13,30 @@ module.exports = {
     if (!req.param('user_id') || !req.param('event_id') || !req.param('anexo') || !req.param('ip')) {
       res.send({Response: 'error', Message: 'Parameters incompleted'})
     } else {
-      // Declaracion de variables
-      var name = req.param('name')
+      if (req.param('type_action') == 'disconnect') {
+        var fecha_evento = req.param('hour_exit')
+      } else {
+        var fecha_evento = dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
+      }
 
-      // Construyo el json
+	  // Construyo el json
       var valuesEvent =
         {
           evento_id: req.param('event_id'),
           user_id: req.param('user_id'),
-          fecha_evento: dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss'),
+          fecha_evento: fecha_evento,
           ip_cliente: req.param('ip'),
           observaciones: '',
           anexo: req.param('anexo'),
           date_really: dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
         }
 
-      // Crea un nuevo evento con las variables 'values_event'
+	  // Crea un nuevo evento con las variables 'values_event'
       Detalle_eventos.create(valuesEvent).exec(function (err, records) {
         if (err) {
           res.send({Response: 'error', Message: 'Fail Inserted Event'})
         } else {
-          res.send({Response: 'success', Message: name})
+          res.send({Response: 'success', Message: 'Inserted Event'})
 
           let query = {
             select: ['id', 'name'],
@@ -41,16 +45,20 @@ module.exports = {
             }
           }
 
-          Eventos.findOne(query).populate('detalle_evento').exec(function (err, record) {
-            if (err) res.send({Response: 'error', Message: 'Fail Search Event'})
+          if (req.param('event_id') == 15) {
+            AnexosController.set_anexo(req, res)
+          } else {
+            Eventos.findOne(query).populate('detalle_evento').exec(function (err, record) {
+              if (err) res.send({Response: 'error', Message: 'Fail Search Event'})
 
-            sails.sockets.join(req.socket, 'panel_agente' + sails.sockets.getId(req))
-            sails.sockets.broadcast('panel_agente' + sails.sockets.getId(req), 'status_agent', {
-              Response: 'success',
-              Socket: sails.sockets.getId(req),
-              Message: record.name
+              sails.sockets.join(req.socket, 'panel_agente' + sails.sockets.getId(req))
+              sails.sockets.broadcast('panel_agente' + sails.sockets.getId(req), 'status_agent', {
+                Response: 'success',
+                Socket: sails.sockets.getId(req),
+                Message: record.name
+              })
             })
-          })
+          }
         }
       })
     }
@@ -62,7 +70,7 @@ module.exports = {
     if (!req.param('user_id')) {
       res.send({Response: 'error', Message: 'Parameters incompleted'})
     } else {
-      // Declaracion de variables
+	  // Declaracion de variables
       let query = {
         select: ['evento_id'],
         where: {
@@ -99,7 +107,7 @@ module.exports = {
     if (!req.param('new_date_event') || !req.param('user_id')) {
       res.send({Response: 'error', Message: 'Parameters incompleted'})
     } else {
-      // Verifica si exista mas de un registro (logeo) en la BD
+	  // Verifica si exista mas de un registro (logeo) en la BD
       let query = {
         user_id: req.param('user_id'),
         evento_id: 11
@@ -108,7 +116,7 @@ module.exports = {
       Detalle_eventos.count(query).exec(function countCB (err, records) {
         if (records > 1) res.send({Response: 'error', Message: 'More Records'})
 
-        // Extrae el 'id','fecha_evento' del primer evento de 'Login', realizado por el agente
+	    // Extrae el 'id','fecha_evento' del primer evento de 'Login', realizado por el agente
         let query = {
           select: ['id', 'fecha_evento'],
           where: {
@@ -121,7 +129,7 @@ module.exports = {
         Detalle_eventos.findOne(query).exec(function (err, record) {
           if (err) res.send({Response: 'error', Message: 'Fail Search Event'})
 
-          // Actualiza el registro para actualización del registro de fecha_evento
+		  // Actualiza el registro para actualización del registro de fecha_evento
           let parameterSearch = { id: record.id }
           let query = {
             date_really: record.fecha_evento,
@@ -139,5 +147,4 @@ module.exports = {
       })
     }
   }
-
 }

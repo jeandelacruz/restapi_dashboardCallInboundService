@@ -4,77 +4,68 @@
  * @description :: Server-side logic for managing anexos
  * @help        :: See http://sailsjs.org/#!/documentation/concepts/Controllers
  */
-const unflatten = require('flat').unflatten;
-const dateFormat = require('dateformat');
+const unflatten = require('flat').unflatten
+const dateFormat = require('dateformat')
 
 module.exports = {
-	
-	set_anexo: function(req, res) {
-  		if(!req.param('user_id') || !req.param('anexo')){
-		    res.send(
-		    	unflatten({
-			        Response: 'error',
-			        Message: 'Parameters incompleted'
-			    })
-		    );
-		    //console.log('holi');
-		    return;
-	  	}else{
-	  		var user_id = req.param('user_id');
-	  		var anexo = req.param('anexo');
-	  		var now = new Date();
-		    var updated_at = dateFormat(now, "yyyy-mm-dd H:MM:ss");
 
-		    Anexos.findOne({
-		    	select	: ['id','name','user_id'],
-		    	where	: {
-		    		name: anexo
-		    	}
-		    }).exec( function (err,records) {
-		    	if(records.user_id == 0 || user_id == 0){
-		    		Anexos.update(
-			  			{  
-			  				name: anexo
-			  			},
-			  			{
-			  				user_id: user_id,
-			  				updated_at: updated_at
-			  			}
-		  			).exec( function (err,records) {
-		  				sails.log(err);
-		  				if(err){
-				        	res.send(
-								unflatten({
-						        	Response 	: 'error',
-						        	Message 	: 'Fail Updated Anexo'
-						    	})
-				          	);
-				        }else{
-				          	res.send(
-								unflatten({
-						        	Response 	: 'success',
-						        	Message 	: 'Updated Anexo'
-						    	})
-				          	);
-				        }
-			  		});
-		    	}else{
-		    		Users.findOne({
-		    		select 	: ['id','primer_nombre','segundo_nombre','apellido_paterno','apellido_materno'],
-		    		where 	: {
-		    			id 	: records.user_id
-			    		}}).populate('anexo').exec(function (err, record) {
-			          		res.send(
-								unflatten({
-						        	Response 	: 'warning',
-						        	Message 	: 'El anexo '+ anexo +' ya se encuentra en uso ' + record.primer_nombre + ' ' + record.segundo_nombre + ' ' + record.apellido_paterno + ' ' + record.apellido_materno
-						    	})
-				          	);
-		            });
-		    	}
-		    });
-	  	}
-	}
+  set_anexo: function (req, res) {
+    if (!req.param('user_id')) {
+      res.send({ Response: 'error', Message: 'Parameters incompleted' })
+    } else {
+      if (req.param('type_action') == 'disconnect' || req.param('type_action') == 'release') {
+        var query = {
+          select: ['id', 'name', 'user_id'],
+          where: {
+            user_id: req.param('user_id')
+          }
+        }
+      } else {
+        var query = {
+          select: ['id', 'name', 'user_id'],
+          where: {
+            name: req.param('anexo')
+          }
+        }
+      }
 
-};
+      Anexos.find(query).exec(function (err, records) {
+        if (err) res.send({Response: 'error', Message: 'Fail Search Event'})
 
+        if (req.param('type_action') == 'disconnect' || req.param('type_action') == 'release') {
+          var user_id = '0'
+          var parameterSearch = { user_id: req.param('user_id') }
+        } else {
+          var user_id = req.param('user_id')
+          var parameterSearch = { name: req.param('anexo') }
+        }
+
+        if (records[0].user_id == 0 || req.param('user_id') == 0 || req.param('type_action') == 'disconnect' || req.param('type_action') == 'release') {
+          let query = {
+            user_id: user_id,
+            updated_at: dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
+          }
+
+          Anexos.update(parameterSearch, query).exec(function (err, records) {
+            sails.log(err)
+            if (err) {
+              res.send({ Response: 'error', Message: 'Fail Updated Anexo' })
+            } else {
+              res.send({ Response: 'success', Message: 'Updated Anexo' })
+            }
+          })
+        } else {
+          let query = {
+            select: ['id', 'primer_nombre', 'segundo_nombre', 'apellido_paterno', 'apellido_materno'],
+            where: {
+              id: records[0].user_id
+            }
+          }
+          Users.findOne(query).populate('anexo').exec(function (err, record) {
+            res.send({ Response: 'warning', Message: 'El anexo ' + req.param('anexo') + ' ya se encuentra en uso ' + record.primer_nombre + ' ' + record.segundo_nombre + ' ' + record.apellido_paterno + ' ' + record.apellido_materno })
+          })
+        }
+      })
+    }
+  }
+}
