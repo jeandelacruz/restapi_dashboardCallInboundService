@@ -13,34 +13,35 @@ module.exports = {
     if (!req.param('user_id') || !req.param('event_id') || !req.param('anexo') || !req.param('ip')) {
       return res.json({Response: 'error', Message: 'Parameters incompleted'})
     } else {
+      let fechaEvento = ''
       if (req.param('type_action') == 'disconnect') {
-        var fecha_evento = req.param('hour_exit')
+        fechaEvento = req.param('hour_exit')
       } else {
-        var fecha_evento = dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
+        fechaEvento = dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
       }
 
-    // Construyo el json
+      // Construyo el json
       var valuesEvent =
         {
           evento_id: req.param('event_id'),
           user_id: req.param('user_id'),
-          fecha_evento: fecha_evento,
+          fecha_evento: fechaEvento,
           ip_cliente: req.param('ip'),
           observaciones: '',
           anexo: req.param('anexo'),
           date_really: dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
         }
 
-    // Crea un nuevo evento con las variables 'values_event'
+      // Crea un nuevo evento con las variables 'values_event'
       Detalle_eventos.create(valuesEvent)
       .then(function (records) {
-        return res.json({Response: 'success', Message: 'Inserted Event'})
         let query = {
           select: ['id', 'name'],
           where: {
             id: req.param('event_id')
           }
         }
+
         if (req.param('event_id') == 15) {
           AnexosController.set_anexo(req, res)
         } else {
@@ -52,6 +53,7 @@ module.exports = {
               Socket: sails.sockets.getId(req),
               Message: record.name
             })
+            return res.json({Response: 'success', Message: 'Inserted Event'})
           })
           .catch(function (err) {
             return res.json({Response: 'error', Message: 'Fail Search Event'})
