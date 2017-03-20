@@ -9,43 +9,42 @@ module.exports = {
 
   attributes: {
 
-  	evento_id: {
-  		type: 'string',
-  		required: true
-  	},
+    evento_id: {
+      type: 'string',
+      required: true
+    },
 
-  	user_id: {
-  		type: 'string',
-  		required: true
-  	},
+    user_id: {
+      type: 'string',
+      required: true
+    },
 
-  	fecha_evento: {
-  		type: 'datetime',
-  		required: true
-  	},
+    fecha_evento: {
+      type: 'datetime',
+      required: true
+    },
 
-  	ip_cliente: {
-  		type: 'string',
-  		required: true,
-  		defaultsTo: ''
-  	},
+    ip_cliente: {
+      type: 'string',
+      required: true,
+      defaultsTo: ''
+    },
 
-  	observaciones: {
-  		type: 'string',
-  		//required: true,
-  		defaultsTo: ''
-  	},
+    observaciones: {
+      type: 'string',
+      defaultsTo: ''
+    },
 
-  	date_really: {
-  		type: 'datetime',
-  		required: true
-  	},
+    date_really: {
+      type: 'datetime',
+      required: true
+    },
 
-  	anexo: {
-  		type: 'string',
-  		required: true,
-  		defaultsTo: ''
-  	}
+    anexo: {
+      type: 'string',
+      required: true,
+      defaultsTo: ''
+    }
 
   },
 
@@ -55,4 +54,4 @@ module.exports = {
 
   autoCreatedAt: false,
   autoUpdatedAt: false
-};
+}

@@ -9,59 +9,59 @@ module.exports = {
 
   attributes: {
 
-  	primer_nombre: {
-  		type: 'string',
-  		require: true
-  	},
+    primer_nombre: {
+      type: 'string',
+      require: true
+    },
 
-  	segundo_nombre: {
-  		type: 'string',
-  		require: true
-  	},
+    segundo_nombre: {
+      type: 'string',
+      require: true
+    },
 
-  	apellido_paterno: {
-  		type: 'string',
-  		require: true
-  	},
+    apellido_paterno: {
+      type: 'string',
+      require: true
+    },
 
-  	apellido_materno: {
-  		type: 'string',
-  		require: true
-  	},
+    apellido_materno: {
+      type: 'string',
+      require: true
+    },
 
-  	username: {
-  		type: 'string',
-  		require: true
-  	},
+    username: {
+      type: 'string',
+      require: true
+    },
 
-  	agente_id: {
-  		type: 'integer',
-  		require: true
-  	},
+    agente_id: {
+      type: 'integer',
+      require: true
+    },
 
-  	email: {
-  		type: 'string',
-  		require: true
-  	},
+    email: {
+      type: 'string',
+      require: true
+    },
 
-  	password: {
-  		type: 'string',
-  		require: true
-  	},
+    password: {
+      type: 'string',
+      require: true
+    },
 
-  	role: {
-  		type: 'string'
-  	},
+    role: {
+      type: 'string'
+    },
 
-  	remember_token: {
-  		type: 'string',
-  		require: true
-  	},
+    remember_token: {
+      type: 'string',
+      require: true
+    },
 
-  	estado_id: {
-  		type: 'integer',
-  		require: true
-  	},
+    estado_id: {
+      type: 'integer',
+      require: true
+    },
 
     anexo: {
       collection: 'anexos',
@@ -72,5 +72,4 @@ module.exports = {
 
   autoCreatedAt: false,
   autoUpdatedAt: false
-};
-
+}

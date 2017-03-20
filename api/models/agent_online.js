@@ -26,43 +26,35 @@ module.exports = {
     },
 
     name_queue_inbound: {
-      type: 'string',
-      defaultsTo: ''
+      type: 'string'
     },
 
     phone_number_inbound: {
-      type: 'string',
-      defaultsTo: ''
+      type: 'string'
     },
 
     star_call_inbound: {
-      type: 'string',
-      defaultsTo: ''
+      type: 'string'
     },
 
     total_calls: {
-      type: 'string',
-      defaultsTo: ''
+      type: 'string'
     },
 
     name_queue: {
-      type: 'string',
-      defaultsTo: ''
+      type: 'string'
     },
 
     status_pause: {
-      type: 'string',
-      defaultsTo: ''
+      type: 'string'
     },
 
     penalty_agent: {
-      type: 'string',
-      defaultsTo: ''
+      type: 'string'
     },
 
     ringinuse_agent: {
-      type: 'string',
-      defaultsTo: ''
+      type: 'string'
     }
 
   },

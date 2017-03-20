@@ -6,34 +6,64 @@
  */
 
 module.exports = {
-  delete: function (req, res) {
-    let numberAnnexed = req.param('number_annexed')
-    console.log('Removing agent on the dashboard: ' + numberAnnexed)
-    agent_online.destroy({number_annexed: numberAnnexed})
-    .then(function () {
-      sails.log('The agent has been remove from the dashboard.')
-      return res.json(numberAnnexed)
+
+  updateOrCreate: function (req, res) {
+    let queryCompare = {number_annexed: req.param('number_annexed')}
+    let dataUpdate = req.allParams()
+
+    agent_online.update(queryCompare, dataUpdate)
+    .then(data => {
+      if (data.length === 0) {
+        // Agent Online does not exist. Create.
+        return agent_online.create(req.allParams())
+        .then(data => {
+          sails.log('The agent ' + data.number_annexed + ' has been adding from the dashboard.')
+          return res.json(data)
+        })
+        .catch(err => {
+          sails.log(err)
+          return res.json(err)
+        })
+      } else {
+        // Agent Online exist. Update
+        sails.log('The agent has ' + data[0].number_annexed + ' been update from the dashboard.')
+        return res.json(data[0])
+      }
     })
-    .catch(function (err) {
-      return res.json(err)
+    .catch(err => {
       sails.log(err)
+      return res.json(err)
     })
   },
 
-  update: function (req, res) {
-    let numberAnnexed = req.param('number_annexed')
-    let dataUpdate = {
-      status_pause: req.param('status_pause')
-    }
-    console.log('Updating agent on the dashboard : ' + req.param('status_pause'))
-    agent_online.update({number_annexed: numberAnnexed}, dataUpdate)
-    .then(function () {
-      sails.log('The agent has been update from the dashboard.')
-      return res.json(updated[0])
+  delete: function (req, res) {
+    let query = {number_annexed: req.param('number_annexed')}
+
+    agent_online.destroy(query)
+    .then(data => {
+      sails.log('The agent ' + data[0].number_annexed + ' has been remove from the dashboard.')
+      return res.json(data[0].number_annexed)
     })
-    .catch(function (err) {
-      return res.json(err)
+    .catch(err => {
       sails.log(err)
+      return res.json(err)
+    })
+  },
+
+  updateFrontEnd: function (req, res) {
+    /* let queryCompare = { number_annexed: req['number_annexed'] }
+    let dataUpdate = { name_event: req['name_event'] } */
+
+    console.log(req.param('event_id'))
+
+    agent_online.update({ number_annexed: annexed }, { name_event: 'Break' }).exec((err, updated) => {
+      if (err) {
+        console.log('No')
+        return res.json({Response: 'error', Message: 'Fail Search Event'})
+      }
+      console.log('Ya')
+      // console.log(updated)
+      return res.json({Response: 'success', Message: 'Inserted Event'})
     })
   }
 }

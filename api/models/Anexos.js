@@ -9,21 +9,21 @@ module.exports = {
 
   attributes: {
 
-  	name: {
-  		type: 'string',
-  		required: true
-  	},
+    name: {
+      type: 'string',
+      required: true
+    },
 
-  	user_id: {
-  		type: 'string',
-  		required: true
-  	},
+    user_id: {
+      type: 'string',
+      required: true
+    },
 
-  	estado_id: {
-  		type: 'string',
-  		required: true
-  	}
-  	
+    estado_id: {
+      type: 'string',
+      required: true
+    }
+
   },
 
   users: {
@@ -32,4 +32,4 @@ module.exports = {
 
   autoCreatedAt: false,
   autoUpdatedAt: false
-};
+}

@@ -40,13 +40,13 @@ module.exports.connections = {
   * Run: npm install sails-mysql                                             *
   *                                                                          *
   ***************************************************************************/
-   someMysqlServer: {
-     adapter: 'sails-mysql',
-     host: '192.167.99.201',
-     user: 'root', //optional
-     password: 'sistemas', //optional
-     database: 'atu_laravel' //optional
-   },
+  someMysqlServer: {
+    adapter: 'sails-mysql',
+    host: '192.167.99.201',
+    user: 'root', // optional
+    password: 'sistemas', // optional
+    database: 'atu_laravel' // optional
+  }
 
   /***************************************************************************
   *                                                                          *
@@ -82,11 +82,10 @@ module.exports.connections = {
   //   database: 'YOUR_POSTGRES_DB' //optional
   // }
 
-
   /***************************************************************************
   *                                                                          *
   * More adapters: https://github.com/balderdashy/sails                      *
   *                                                                          *
   ***************************************************************************/
 
-};
+}
