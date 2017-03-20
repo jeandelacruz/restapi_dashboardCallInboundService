@@ -7,15 +7,16 @@
 const dateFormat = require('dateformat')
 const anexos = require('./AnexosController')
 const agentOnline = require('./agent_onlineController')
-var aio = require('asterisk.io'),
-  ami = null
+const aio = require('asterisk.io')
+var ami = null
 
 module.exports = {
 
   change_status: function (req, res) {
-  	// Conexion al asterisk
+    // Conexion al asterisk
     ami = aio.ami('192.167.99.224', 5038, 'admin', 'admin')
-	// Verifica error al conectar al asterisk
+
+    // Verifica error al conectar al asterisk
     ami.on('error', err => { console.log(err) })
 
     if (!req.param('user_id') || !req.param('event_id') || !req.param('anexo') || !req.param('ip')) return res.json({Response: 'error', Message: 'Parameters incompleted'})
@@ -41,13 +42,15 @@ module.exports = {
 
       Detalle_eventos.create(valuesEvent)
       .then(record => {
-      	// Parametros para consultar el evento
+        // Parametros para consultar el evento
         let query = { select: ['id', 'name', 'estado_call_id'], where: { id: req.param('event_id') } }
+
         // Parametros par consultar el usuario
         let query_user = { select: ['id', 'username'], where: {	id: req.param('user_id') } }
 
         // Si el evento es 15 me desconecta los anexos
-        if (req.param('event_id') == 15) {
+        if (req.param('event_id') === 15) {
+          console.log('Aqui entre')
           // Se agrega el anexo
           anexos.set_anexo(req, res)
         } else {
