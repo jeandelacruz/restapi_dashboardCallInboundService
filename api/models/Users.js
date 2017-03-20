@@ -66,6 +66,11 @@ module.exports = {
     anexo: {
       collection: 'anexos',
       via: 'user_id'
+    },
+
+    detalle_evento: {
+      collection: 'detalle_eventos',
+      via: 'user_id'
     }
 
   },

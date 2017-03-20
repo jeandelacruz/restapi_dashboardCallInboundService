@@ -7,10 +7,17 @@
 const dateFormat = require('dateformat')
 const anexos = require('./AnexosController')
 const agentOnline = require('./agent_onlineController')
+var aio = require('asterisk.io'),
+  ami = null
 
 module.exports = {
 
   change_status: function (req, res) {
+  	// Conexion al asterisk
+    ami = aio.ami('192.167.99.224', 5038, 'admin', 'admin')
+	// Verifica error al conectar al asterisk
+    ami.on('error', err => { console.log(err) })
+
     if (!req.param('user_id') || !req.param('event_id') || !req.param('anexo') || !req.param('ip')) return res.json({Response: 'error', Message: 'Parameters incompleted'})
 
     let fechaEvento = dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
@@ -34,13 +41,12 @@ module.exports = {
 
       Detalle_eventos.create(valuesEvent)
       .then(record => {
-        let query = {
-          select: ['id', 'name'],
-          where: {
-            id: req.param('event_id')
-          }
-        }
+      	// Parametros para consultar el evento
+        let query = { select: ['id', 'name', 'estado_call_id'], where: { id: req.param('event_id') } }
+        // Parametros par consultar el usuario
+        let query_user = { select: ['id', 'username'], where: {	id: req.param('user_id') } }
 
+        // Si el evento es 15 me desconecta los anexos
         if (req.param('event_id') == 15) {
           // Se agrega el anexo
           anexos.set_anexo(req, res)
@@ -50,12 +56,67 @@ module.exports = {
           .then(record => {
             sails.sockets.join(req.socket, 'panel_agente' + sails.sockets.getId(req))
             sails.sockets.broadcast('panel_agente' + sails.sockets.getId(req), 'status_agent', {
-              Response: 'success',
-              Socket: sails.sockets.getId(req),
-              Message: record.name
+              Response: 'success', Socket: sails.sockets.getId(req), Name_Event: record.name, Event_id: record.id })
+            // Parametro del estado del evento
+            var event_id = record.estado_call_id
+
+            // Se busca el username del usuario
+            return Users.findOne(query_user).populate('detalle_evento')
+            .then(record => {
+            	// Verifico si el estado del evento es uno
+            	if (event_id == 1) {
+			        ami.on('ready', data => {
+			        	// Agrego al agente a la cola
+			         	ami.action(
+					        'QueueAdd', {
+					        	Queue: 'HD_CE_Telefonia',
+					        	Interface: 'SIP/' + req.param('anexo'),
+					        	Paused: '0',
+					        	MemberName: 'Agent/' + record.username
+					        },
+					        function (data) {
+					        	// Verifico si ya ha estado agregado
+					            if (data.Message == 'Unable to add interface: Already there') {
+					            	// Despausa al agente
+					            	ami.action(
+								        'QueuePause', {
+								        	Interface: 'SIP/' + req.param('anexo'),
+								        	Paused: '0'
+								        },
+								        function (data) {
+								            console.log('Despausado')
+								        }
+								    )
+					            } else {
+					            	// Muestra el mensaje del success
+				            		console.log(data)
+					            }
+					        }
+					    )
+			        })
+			        Detalle_eventos.query('COMMIT')
+	            	return agentOnline.updateFrontEnd(req, res)
+            	} else {
+            		// Pausa al agente
+            		ami.on('ready', data => {
+			         	ami.action(
+					        'QueuePause', {
+					        	Interface: 'SIP/' + req.param('anexo'),
+					        	Paused: '1'
+					        },
+					        function (data) {
+					            console.log(data)
+					        }
+					    )
+			        })
+			        Detalle_eventos.query('COMMIT')
+	            	return agentOnline.updateFrontEnd(req, res)
+            	}
             })
-            Detalle_eventos.query('COMMIT')
-            return agentOnline.updateFrontEnd(req, res)
+            .catch(err => {
+            	Detalle_eventos.query('ROLLBACK')
+            	return res.json({Response: 'error', Message: 'Fail User Search'})
+            })
           })
           .catch(err => {
             Detalle_eventos.query('ROLLBACK')
@@ -88,7 +149,7 @@ module.exports = {
       Detalle_eventos.findOne(query)
      .then(record => {
        let query = {
-         select: ['name'],
+         select: ['id', 'name'],
          where: {
            id: record.evento_id
          }
@@ -99,7 +160,8 @@ module.exports = {
          sails.sockets.broadcast('panel_agente' + sails.sockets.getId(req), 'status_agent', {
            Response: 'success',
            Socket: sails.sockets.getId(req),
-           Message: record.name
+           Name_Event: record.name,
+           Event_id: record.id
          })
          Detalle_eventos.query('COMMIT')
        })

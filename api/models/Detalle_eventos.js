@@ -52,6 +52,10 @@ module.exports = {
     model: 'eventos'
   },
 
+  users: {
+    model: 'users'
+  },
+
   autoCreatedAt: false,
   autoUpdatedAt: false
 }
