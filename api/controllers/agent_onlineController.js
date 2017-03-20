@@ -51,19 +51,29 @@ module.exports = {
   },
 
   updateFrontEnd: function (req, res) {
-    /* let queryCompare = { number_annexed: req['number_annexed'] }
-    let dataUpdate = { name_event: req['name_event'] } */
-
-    console.log(req.param('event_id'))
-
-    agent_online.update({ number_annexed: annexed }, { name_event: 'Break' }).exec((err, updated) => {
-      if (err) {
-        console.log('No')
-        return res.json({Response: 'error', Message: 'Fail Search Event'})
+    let query = {
+      select: ['id', 'name'],
+      where: {
+        id: req.param('event_id')
       }
-      console.log('Ya')
-      // console.log(updated)
-      return res.json({Response: 'success', Message: 'Inserted Event'})
+    }
+    let queryCompare = { number_annexed: req.param('anexo') }
+
+    return Eventos.findOne(query).populate('agent_onlines')
+    .then(record => {
+      return agent_online.update(queryCompare, { name_event: record.name })
+		.then(record => {
+  			agent_online.query('COMMIT')
+  			return res.json({Response: 'success', Message: 'Inserted Event'})
+      	})
+      	.catch(err => {
+    		return res.json({Response: 'error', Message: 'Fail Inserted Event'})
+      	})
+    })
+    .catch(err => {
+      agent_online.query('ROLLBACK')
+      return res.json({Response: 'error', Message: 'Fail Search Event'})
     })
   }
 }
+

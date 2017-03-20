@@ -27,7 +27,7 @@ module.exports = {
         if (err) return res.json({ Response: 'error', Message: 'Failed Start Transaction - set_anexo' })
 
         Anexos.find(query)
-        .then(function (records) {
+        .then(record => {
           let userID = ''
           let parameterSearch = ''
 
@@ -39,18 +39,18 @@ module.exports = {
             parameterSearch = { name: req.param('anexo') }
           }
 
-          if (records[0].user_id === 0 || req.param('user_id') === 0 || req.param('type_action') === 'disconnect' || req.param('type_action') === 'release') {
+          if (record[0].user_id === 0 || req.param('user_id') === 0 || req.param('type_action') === 'disconnect' || req.param('type_action') === 'release') {
             let query = {
               user_id: userID,
               updated_at: dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
             }
 
             return Anexos.update(parameterSearch, query)
-            .then(function () {
+            .then(record => {
               Anexos.query('COMMIT')
               return res.json({ Response: 'success', Message: 'Updated Anexo' })
             })
-            .catch(function (err) {
+            .catch(err => {
               sails.log(err)
               Anexos.query('ROLLBACK')
               return res.json({ Response: 'error', Message: 'Fail Updated Anexo' })
@@ -58,7 +58,7 @@ module.exports = {
           } else {
             let query = {
               select: ['id', 'primer_nombre', 'segundo_nombre', 'apellido_paterno', 'apellido_materno'],
-              where: {id: records[0].user_id}
+              where: {id: record[0].user_id}
             }
 
             return Users.findOne(query).populate('anexo')

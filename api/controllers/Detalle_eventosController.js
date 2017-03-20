@@ -33,7 +33,7 @@ module.exports = {
       if (err) return res.json({ Response: 'error', Message: 'Failed Start Transaction - change_status' })
 
       Detalle_eventos.create(valuesEvent)
-      .then(records => {
+      .then(record => {
         let query = {
           select: ['id', 'name'],
           where: {
@@ -47,7 +47,7 @@ module.exports = {
         } else {
           // Se busca el nombre del evento mediante el evento_id
           return Eventos.findOne(query).populate('detalle_evento')
-          .then(function (record) {
+          .then(record => {
             sails.sockets.join(req.socket, 'panel_agente' + sails.sockets.getId(req))
             sails.sockets.broadcast('panel_agente' + sails.sockets.getId(req), 'status_agent', {
               Response: 'success',
@@ -56,9 +56,8 @@ module.exports = {
             })
             Detalle_eventos.query('COMMIT')
             return agentOnline.updateFrontEnd(req, res)
-            // return res.json({Response: 'success', Message: 'Inserted Event'})
           })
-          .catch(function (err) {
+          .catch(err => {
             Detalle_eventos.query('ROLLBACK')
             return res.json({Response: 'error', Message: 'Fail Search Event'})
           })
@@ -86,8 +85,8 @@ module.exports = {
     Detalle_eventos.query('BEGIN', function (err) {
       if (err) return res.json({ Response: 'error', Message: 'Failed Start Transaction - getstatus' })
 
-     Detalle_eventos.findOne(query)
-     .then(function (record) {
+      Detalle_eventos.findOne(query)
+     .then(record => {
        let query = {
          select: ['name'],
          where: {
@@ -95,7 +94,7 @@ module.exports = {
          }
        }
        return Eventos.findOne(query).populate('detalle_evento')
-       .then(function (record) {
+       .then(record => {
          sails.sockets.join(req.socket, 'panel_agente' + sails.sockets.getId(req))
          sails.sockets.broadcast('panel_agente' + sails.sockets.getId(req), 'status_agent', {
            Response: 'success',
@@ -104,13 +103,13 @@ module.exports = {
          })
          Detalle_eventos.query('COMMIT')
        })
-       .catch(function (err) {
+       .catch(err => {
          Detalle_eventos.query('ROLLBACK')
          return res.json({Response: 'error', Message: 'Fail Search Event'})
        })
      })
 
-     .catch(function (err) {
+     .catch(err => {
        Detalle_eventos.query('ROLLBACK')
        return res.json({Response: 'error', Message: 'Fail Search Event'})
      })
@@ -131,8 +130,8 @@ module.exports = {
         if (err) return res.json({ Response: 'error', Message: 'Failed Start Transaction - register_assistence' })
 
         Detalle_eventos.count(query)
-        .then(function (records) {
-          if (records > 1) return res.json({Response: 'error', Message: 'More Records'})
+        .then(record => {
+          if (record > 1) return res.json({Response: 'error', Message: 'More Records'})
           // Extrae el 'id','fecha_evento' del primer evento de 'Login', realizado por el agente
           let query = {
             select: ['id', 'fecha_evento'],
@@ -144,7 +143,7 @@ module.exports = {
           }
 
           return Detalle_eventos.findOne(query)
-          .then(function (record) {
+          .then(record => {
             // Actualiza el registro para actualización del registro de fecha_evento
             let parameterSearch = { id: record.id }
             let query = {
@@ -152,21 +151,21 @@ module.exports = {
               fecha_evento: req.param('new_date_event')
             }
             return Detalle_eventos.update(parameterSearch, query)
-            .then(function (record) {
+            .then(record => {
               Detalle_eventos.query('COMMIT')
               return res.json({Response: 'success', Message: 'Updated Event'})
             })
-            .catch(function (err) {
+            .catch(err => {
               Detalle_eventos.query('ROLLBACK')
               return res.json({Response: 'error', Message: 'Fail Updated Event'})
             })
           })
-          .catch(function (err) {
+          .catch(err => {
             Detalle_eventos.query('ROLLBACK')
             return res.json({Response: 'error', Message: 'Fail Search Event'})
           })
         })
-        .catch(function (err) {
+        .catch(err => {
           Detalle_eventos.query('ROLLBACK')
           return res.json({Response: 'error', Message: 'Fail Count Records'})
         })
