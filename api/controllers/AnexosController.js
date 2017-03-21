@@ -27,7 +27,7 @@ module.exports = {
         if (err) return res.json({ Response: 'error', Message: 'Failed Start Transaction - set_anexo' })
 
         Anexos.find(query)
-        .then(record => {
+        .then(record_find => {
           let userID = ''
           let parameterSearch = ''
 
@@ -39,14 +39,14 @@ module.exports = {
             parameterSearch = { name: req.param('anexo') }
           }
 
-          if (record[0].user_id === 0 || req.param('user_id') === 0 || req.param('type_action') === 'disconnect' || req.param('type_action') === 'release') {
+          if (record_find[0].user_id === 0 || req.param('user_id') === 0 || req.param('type_action') === 'disconnect' || req.param('type_action') === 'release') {
             let query = {
               user_id: userID,
               updated_at: dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
             }
 
             return Anexos.update(parameterSearch, query)
-            .then(record => {
+            .then(record_update => {
               Anexos.query('COMMIT')
               return res.json({ Response: 'success', Message: 'Updated Anexo' })
             })
@@ -58,13 +58,13 @@ module.exports = {
           } else {
             let query = {
               select: ['id', 'primer_nombre', 'segundo_nombre', 'apellido_paterno', 'apellido_materno'],
-              where: {id: record[0].user_id}
+              where: {id: record_find[0].user_id}
             }
 
             return Users.findOne(query).populate('anexo')
-            .then(record => {
+            .then(record_findone => {
               Anexos.query('COMMIT')
-              return res.json({ Response: 'warning', Message: 'El anexo ' + req.param('anexo') + ' ya se encuentra en uso ' + record.primer_nombre + ' ' + record.segundo_nombre + ' ' + record.apellido_paterno + ' ' + record.apellido_materno })
+              return res.json({ Response: 'warning', Message: 'El anexo ' + req.param('anexo') + ' ya se encuentra en uso ' + record_findone.primer_nombre + ' ' + record_findone.segundo_nombre + ' ' + record_findone.apellido_paterno + ' ' + record_findone.apellido_materno })
             })
             .catch(err => {
               sails.log(err)

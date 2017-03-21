@@ -59,10 +59,6 @@ module.exports = {
 
   },
 
-  eventos: {
-    model: 'eventos'
-  },
-
   autoCreatedAt: false,
   autoUpdatedAt: false
 }

@@ -57,11 +57,6 @@ module.exports = {
     detalle_evento: {
       collection: 'detalle_eventos',
       via: 'evento_id'
-    },
-
-    agent_onlines: {
-      collection: 'agent_online',
-      via: 'name_event'
     }
 
   },

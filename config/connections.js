@@ -42,10 +42,10 @@ module.exports.connections = {
   ***************************************************************************/
   someMysqlServer: {
     adapter: 'sails-mysql',
-    host: '192.167.99.201',
-    user: 'root', // optional
-    password: 'sistemas', // optional
-    database: 'atu_laravel' // optional
+    host: '192.167.99.207',
+    user: 'jcruz', // optional
+    password: 'jeancruz', // optional
+    database: 'prueba_laravel' // optional
   }
 
   /***************************************************************************

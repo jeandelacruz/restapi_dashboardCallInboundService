@@ -50,30 +50,16 @@ module.exports = {
     })
   },
 
-  updateFrontEnd: function (req, res) {
-    let query = {
-      select: ['id', 'name'],
-      where: {
-        id: req.param('event_id')
-      }
-    }
+  updateFrontEnd: function (req, name_event, res) {
     let queryCompare = { number_annexed: req.param('anexo') }
 
-    return Eventos.findOne(query).populate('agent_onlines')
-    .then(record => {
-      return agent_online.update(queryCompare, { name_event: record.name })
-		.then(record => {
-  			agent_online.query('COMMIT')
-  			return res.json({Response: 'success', Message: 'Inserted Event'})
-      	})
-      	.catch(err => {
-    		return res.json({Response: 'error', Message: 'Fail Inserted Event'})
-      	})
-    })
-    .catch(err => {
-      agent_online.query('ROLLBACK')
-      return res.json({Response: 'error', Message: 'Fail Search Event'})
-    })
+    return agent_online.update(queryCompare, { name_event: name_event })
+      .then(record => {
+        agent_online.query('COMMIT')
+        return res.json({Response: 'success', Message: 'Inserted Event'})
+      })
+      .catch(err => {
+        return res.json({Response: 'error', Message: 'Fail Inserted Event'})
+      })
   }
 }
-

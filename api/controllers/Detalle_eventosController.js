@@ -13,12 +13,6 @@ var ami = null
 module.exports = {
 
   change_status: function (req, res) {
-    // Conexion al asterisk
-    ami = aio.ami('192.167.99.224', 5038, 'admin', 'admin')
-
-    // Verifica error al conectar al asterisk
-    ami.on('error', err => { console.log(err) })
-
     if (!req.param('user_id') || !req.param('event_id') || !req.param('anexo') || !req.param('ip')) return res.json({Response: 'error', Message: 'Parameters incompleted'})
 
     let fechaEvento = dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
@@ -41,84 +35,91 @@ module.exports = {
       if (err) return res.json({ Response: 'error', Message: 'Failed Start Transaction - change_status' })
 
       Detalle_eventos.create(valuesEvent)
-      .then(record => {
+      .then(record_create => {
         // Parametros para consultar el evento
         let query = { select: ['id', 'name', 'estado_call_id'], where: { id: req.param('event_id') } }
 
         // Parametros par consultar el usuario
-        let query_user = { select: ['id', 'username'], where: {	id: req.param('user_id') } }
+        let query_user = { select: ['id', 'username'], where: { id: req.param('user_id') } }
 
         // Si el evento es 15 me desconecta los anexos
         if (req.param('event_id') === 15) {
-          console.log('Aqui entre')
           // Se agrega el anexo
           anexos.set_anexo(req, res)
         } else {
           // Se busca el nombre del evento mediante el evento_id
           return Eventos.findOne(query).populate('detalle_evento')
-          .then(record => {
+          .then(record_findone => {
             sails.sockets.join(req.socket, 'panel_agente' + sails.sockets.getId(req))
             sails.sockets.broadcast('panel_agente' + sails.sockets.getId(req), 'status_agent', {
-              Response: 'success', Socket: sails.sockets.getId(req), Name_Event: record.name, Event_id: record.id })
+              Response: 'success', Socket: sails.sockets.getId(req), Name_Event: record_findone.name, Event_id: record_findone.id })
             // Parametro del estado del evento
-            var event_id = record.estado_call_id
+            var event_id = record_findone.estado_call_id
 
             // Se busca el username del usuario
             return Users.findOne(query_user).populate('detalle_evento')
-            .then(record => {
-            	// Verifico si el estado del evento es uno
-            	if (event_id == 1) {
-			        ami.on('ready', data => {
-			        	// Agrego al agente a la cola
-			         	ami.action(
-					        'QueueAdd', {
-					        	Queue: 'HD_CE_Telefonia',
-					        	Interface: 'SIP/' + req.param('anexo'),
-					        	Paused: '0',
-					        	MemberName: 'Agent/' + record.username
-					        },
-					        function (data) {
-					        	// Verifico si ya ha estado agregado
-					            if (data.Message == 'Unable to add interface: Already there') {
-					            	// Despausa al agente
-					            	ami.action(
-								        'QueuePause', {
-								        	Interface: 'SIP/' + req.param('anexo'),
-								        	Paused: '0'
-								        },
-								        function (data) {
-								            console.log('Despausado')
-								        }
-								    )
-					            } else {
-					            	// Muestra el mensaje del success
-				            		console.log(data)
-					            }
-					        }
-					    )
-			        })
-			        Detalle_eventos.query('COMMIT')
-	            	return agentOnline.updateFrontEnd(req, res)
-            	} else {
-            		// Pausa al agente
-            		ami.on('ready', data => {
-			         	ami.action(
-					        'QueuePause', {
-					        	Interface: 'SIP/' + req.param('anexo'),
-					        	Paused: '1'
-					        },
-					        function (data) {
-					            console.log(data)
-					        }
-					    )
-			        })
-			        Detalle_eventos.query('COMMIT')
-	            	return agentOnline.updateFrontEnd(req, res)
-            	}
+            .then(record_findoneu => {
+              // Conexion al asterisk
+              ami = aio.ami('192.167.99.224', 5038, 'admin', 'admin')
+
+              // Verifica error al conectar al asterisk
+              ami.on('error', err => { console.log(err) })
+              // Verifico si el estado del evento es uno
+              if (event_id == 1) {
+                ami.on('ready', data => {
+                // Agrego al agente a la cola
+                  ami.action(
+                  'QueueAdd', {
+                    Queue: 'HD_CE_Telefonia',
+                    Interface: 'SIP/' + req.param('anexo'),
+                    Paused: '0',
+                    MemberName: 'Agent/' + record_findoneu.username
+                  },
+                  function (data) {
+                    // Verifico si ya ha estado agregado
+                    if (data.Message == 'Unable to add interface: Already there') {
+                        // Despausa al agente
+                      ami.action(
+                        'QueuePause', {
+                          Interface: 'SIP/' + req.param('anexo'),
+                          Paused: '0'
+                        },
+                        function (data) {
+                          console.log('Interface Despaused successfully')
+                        }
+                    )
+                    } else {
+                        // Muestra el mensaje del success
+                      console.log(data)
+                    }
+                  }
+              )
+                })
+                Detalle_eventos.query('COMMIT')
+                var namEvent = record_findone.name
+                return agentOnline.updateFrontEnd(req, namEvent, res)
+              } else {
+                // Pausa al agente
+                ami.on('ready', data => {
+                  ami.action(
+                  'QueuePause', {
+                    Interface: 'SIP/' + req.param('anexo'),
+                    Paused: '1'
+                  },
+                  function (data) {
+                    console.log(data)
+                  }
+              )
+                })
+                Detalle_eventos.query('COMMIT')
+
+                var namEvent = record_findone.name
+                return agentOnline.updateFrontEnd(req, namEvent, res)
+              }
             })
             .catch(err => {
-            	Detalle_eventos.query('ROLLBACK')
-            	return res.json({Response: 'error', Message: 'Fail User Search'})
+              Detalle_eventos.query('ROLLBACK')
+              return res.json({Response: 'error', Message: 'Fail User Search'})
             })
           })
           .catch(err => {
@@ -150,21 +151,21 @@ module.exports = {
       if (err) return res.json({ Response: 'error', Message: 'Failed Start Transaction - getstatus' })
 
       Detalle_eventos.findOne(query)
-     .then(record => {
+     .then(record_findone => {
        let query = {
          select: ['id', 'name'],
          where: {
-           id: record.evento_id
+           id: record_findone.evento_id
          }
        }
        return Eventos.findOne(query).populate('detalle_evento')
-       .then(record => {
+       .then(record_findonee => {
          sails.sockets.join(req.socket, 'panel_agente' + sails.sockets.getId(req))
          sails.sockets.broadcast('panel_agente' + sails.sockets.getId(req), 'status_agent', {
            Response: 'success',
            Socket: sails.sockets.getId(req),
-           Name_Event: record.name,
-           Event_id: record.id
+           Name_Event: record_findonee.name,
+           Event_id: record_findonee.id
          })
          Detalle_eventos.query('COMMIT')
        })
@@ -195,10 +196,10 @@ module.exports = {
         if (err) return res.json({ Response: 'error', Message: 'Failed Start Transaction - register_assistence' })
 
         Detalle_eventos.count(query)
-        .then(record => {
-          if (record > 1) return res.json({Response: 'error', Message: 'More Records'})
+        .then(record_count => {
+          if (record_count > 1) return res.json({Response: 'error', Message: 'More Records'})
           // Extrae el 'id','fecha_evento' del primer evento de 'Login', realizado por el agente
-          let query = {
+          let query_findone = {
             select: ['id', 'fecha_evento'],
             where: {
               user_id: req.param('user_id'),
@@ -207,16 +208,16 @@ module.exports = {
             sort: 'fecha_evento ASC'
           }
 
-          return Detalle_eventos.findOne(query)
-          .then(record => {
+          return Detalle_eventos.findOne(query_findone)
+          .then(record_findone => {
             // Actualiza el registro para actualización del registro de fecha_evento
-            let parameterSearch = { id: record.id }
+            let parameterSearch = { id: record_findone.id }
             let query = {
-              date_really: record.fecha_evento,
+              date_really: record_findone.fecha_evento,
               fecha_evento: req.param('new_date_event')
             }
             return Detalle_eventos.update(parameterSearch, query)
-            .then(record => {
+            .then(record_update => {
               Detalle_eventos.query('COMMIT')
               return res.json({Response: 'success', Message: 'Updated Event'})
             })
