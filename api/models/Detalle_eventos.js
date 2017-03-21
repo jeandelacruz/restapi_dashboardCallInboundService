@@ -56,6 +56,14 @@ module.exports = {
     model: 'users'
   },
 
+  users_queues: {
+    model: 'users_queues'
+  },
+
+  queues: {
+    model: 'queues'
+  },
+
   autoCreatedAt: false,
   autoUpdatedAt: false
 }

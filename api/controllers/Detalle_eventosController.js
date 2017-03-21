@@ -7,15 +7,16 @@
 const dateFormat = require('dateformat')
 const anexos = require('./AnexosController')
 const agentOnline = require('./agent_onlineController')
+const forEach = require('async-foreach').forEach
 const aio = require('asterisk.io')
-var ami = null
+const ami = null
 
 module.exports = {
 
   change_status: function (req, res) {
     if (!req.param('user_id') || !req.param('event_id') || !req.param('anexo') || !req.param('ip')) return res.json({Response: 'error', Message: 'Parameters incompleted'})
 
-    let fechaEvento = dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
+    let fechaEvento = date_format(new Date())
     if (req.param('type_action') === 'disconnect') {
       fechaEvento = req.param('hour_exit')
     }
@@ -27,7 +28,7 @@ module.exports = {
       ip_cliente: req.param('ip'),
       observaciones: '',
       anexo: req.param('anexo'),
-      date_really: dateFormat(new Date(), 'yyyy-mm-dd H:MM:ss')
+      date_really: date_format(new Date())
     }
 
     // Empieza la transaccion
@@ -50,72 +51,50 @@ module.exports = {
           // Se busca el nombre del evento mediante el evento_id
           return Eventos.findOne(query).populate('detalle_evento')
           .then(record_findone => {
-            sails.sockets.join(req.socket, 'panel_agente' + sails.sockets.getId(req))
-            sails.sockets.broadcast('panel_agente' + sails.sockets.getId(req), 'status_agent', {
-              Response: 'success', Socket: sails.sockets.getId(req), Name_Event: record_findone.name, Event_id: record_findone.id })
+            sails.sockets.join(req.socket, 'panel_agente:' + req.param('anexo'))
+	         sails.sockets.broadcast('panel_agente:' + req.param('anexo'), 'status_agent', {
+	           Response: 'success',
+	           Socket: sails.sockets.getId(req),
+	           Name_Event: record_findone.name,
+	           Event_id: record_findone.id
+	         })
             // Parametro del estado del evento
             var event_id = record_findone.estado_call_id
 
             // Se busca el username del usuario
             return Users.findOne(query_user).populate('detalle_evento')
             .then(record_findoneu => {
-              // Conexion al asterisk
-              ami = aio.ami('192.167.99.224', 5038, 'admin', 'admin')
-
-              // Verifica error al conectar al asterisk
-              ami.on('error', err => { console.log(err) })
-              // Verifico si el estado del evento es uno
-              if (event_id == 1) {
-                ami.on('ready', data => {
-                // Agrego al agente a la cola
-                  ami.action(
-                  'QueueAdd', {
-                    Queue: 'HD_CE_Telefonia',
-                    Interface: 'SIP/' + req.param('anexo'),
-                    Paused: '0',
-                    MemberName: 'Agent/' + record_findoneu.username
-                  },
-                  function (data) {
-                    // Verifico si ya ha estado agregado
-                    if (data.Message == 'Unable to add interface: Already there') {
-                        // Despausa al agente
-                      ami.action(
-                        'QueuePause', {
-                          Interface: 'SIP/' + req.param('anexo'),
-                          Paused: '0'
-                        },
-                        function (data) {
-                          console.log('Interface Despaused successfully')
-                        }
-                    )
-                    } else {
-                        // Muestra el mensaje del success
-                      console.log(data)
-                    }
-                  }
-              )
-                })
-                Detalle_eventos.query('COMMIT')
-                var namEvent = record_findone.name
-                return agentOnline.updateFrontEnd(req, namEvent, res)
-              } else {
-                // Pausa al agente
-                ami.on('ready', data => {
-                  ami.action(
-                  'QueuePause', {
-                    Interface: 'SIP/' + req.param('anexo'),
-                    Paused: '1'
-                  },
-                  function (data) {
-                    console.log(data)
-                  }
-              )
-                })
-                Detalle_eventos.query('COMMIT')
-
-                var namEvent = record_findone.name
-                return agentOnline.updateFrontEnd(req, namEvent, res)
-              }
+            	return Users_queues.find({ user_id: req.param('user_id')}).populate('detalle_evento')
+            	.then(record_findq => {
+            		// console.log(record_findq.length)
+            		forEach(record_findq, function (item) {
+					  Queues.find({ id: item.queue_id }).populate('detalle_evento').exec(function (err, record_finque) {
+	            		if (err) {
+	            			Detalle_eventos.query('ROLLBACK')
+	              			// return res.json({Response: 'error', Message: 'Fail Search Event'})
+	            		}
+	            		console.log(record_finque)
+					  })
+            		})
+            		  // Conexion al asterisk
+		              connection_ami()
+		              // Verifico si el estado del evento es uno
+		              if (event_id == 1) {
+		                queue_add_despaused(req.param('anexo'), record_findoneu.username)
+		                Detalle_eventos.query('COMMIT')
+		                var namEvent = record_findone.name
+		                return agentOnline.updateFrontEnd(req, namEvent, res)
+		              } else {
+		                queue_paused(req.param('anexo'))
+		                Detalle_eventos.query('COMMIT')
+		                var namEvent = record_findone.name
+		                return agentOnline.updateFrontEnd(req, namEvent, res)
+		              }
+            	})
+            	.catch(err => {
+            		Detalle_eventos.query('ROLLBACK')
+              		return res.json({Response: 'error', Message: 'Fail Search Event'})
+            	})
             })
             .catch(err => {
               Detalle_eventos.query('ROLLBACK')
@@ -238,4 +217,73 @@ module.exports = {
       })
     }
   }
+}
+
+// Funciones independientes
+
+function date_format (date) {
+  let date_format = dateFormat(date, 'yyyy-mm-dd H:MM:ss')
+  return date_format
+}
+
+function connection_ami () {
+  ami = aio.ami('192.167.99.224', 5038, 'admin', 'admin')
+  ami.on('error', err => { console.log(err) })
+}
+
+function queue_add_despaused (anexo, username) {
+  ami.on('ready', data => {
+    // Agrego al agente a la cola
+    ami.action(
+      'QueueAdd', {
+        Queue: 'HD_CE_Telefonia',
+        Interface: 'SIP/' + anexo,
+        Paused: '0',
+        MemberName: 'Agent/' + username
+      },
+      function (data) {
+        // Verifico si ya ha estado agregado
+        if (data.Message == 'Unable to add interface: Already there') {
+          // Despausa al agente
+          ami.action(
+            'QueuePause', {
+              Interface: 'SIP/' + anexo,
+              Paused: '0'
+            },
+            function (data) {
+              console.log('Interface Despaused successfully')
+            }
+          )
+        } else {
+          // Muestra el mensaje del success
+          console.log(data)
+        }
+      }
+    )
+  })
+}
+
+function queue_paused (anexo) {
+  // Pausa al agente
+  ami.on('ready', data => {
+    ami.action(
+        'QueuePause', {
+          Interface: 'SIP/' + anexo,
+          Paused: '1'
+        },
+        function (data) {
+          console.log(data)
+        }
+    )
+  })
+}
+
+function socket_request (anexo, route_socket, name_event, evento_id) {
+  sails.sockets.join(req.socket, 'panel_agente' + anexo)
+  sails.sockets.broadcast('panel_agente' + anexo, route_socket, {
+    Response: 'success',
+    Socket: sails.sockets.getId(req),
+    Name_Event: name_event,
+    Event_id: evento_id
+  })
 }
