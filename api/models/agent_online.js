@@ -15,8 +15,7 @@ module.exports = {
     },
 
     name_agent: {
-      type: 'string',
-      required: true
+      type: 'string'
     },
 
     name_event: {

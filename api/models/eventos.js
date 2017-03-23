@@ -52,11 +52,6 @@ module.exports = {
     color: {
       type: 'string',
       required: true
-    },
-
-    detalle_evento: {
-      collection: 'detalle_eventos',
-      via: 'evento_id'
     }
 
   },

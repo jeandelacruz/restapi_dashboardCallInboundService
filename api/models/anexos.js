@@ -1,5 +1,5 @@
 /**
- * Queues.js
+ * anexos.js
  *
  * @description :: TODO: You might write a short summary of how this model works and what it represents here.
  * @docs        :: http://sailsjs.org/documentation/concepts/models-and-orm/models
@@ -10,30 +10,24 @@ module.exports = {
   attributes: {
 
     name: {
-      type: 'string'
+      type: 'string',
+      required: true
     },
 
-    vdn: {
-      type: 'string'
-    },
-
-    queues_strategy_id: {
-    	type: 'integer'
-    },
-
-    queues_priority_id: {
-    	type: 'integer'
+    user_id: {
+      type: 'string',
+      required: true
     },
 
     estado_id: {
-    	type: 'integer'
-    },
-
-    detalle_evento: {
-      collection: 'detalle_eventos',
-      via: 'id'
+      type: 'string',
+      required: true
     }
 
+  },
+
+  users: {
+    model: 'users'
   },
 
   autoCreatedAt: false,
