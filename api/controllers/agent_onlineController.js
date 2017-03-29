@@ -14,52 +14,51 @@ module.exports = {
     agent_online.update(queryCompare, dataUpdate)
     .then(data => {
       if (data.length === 0) {
-        // Agent Online does not exist. Create.
         return agent_online.create(req.allParams())
         .then(data => {
           sails.log('The agent ' + data.number_annexed + ' has been adding from the dashboard.')
           return res.json(data)
         })
         .catch(err => {
-          sails.log(err)
+          sails.log('The agent has ' + data[0].number_annexed + ' been update from the dashboard.')
           return res.json(err)
         })
       } else {
-        // Agent Online exist. Update
-        sails.log('The agent has ' + data[0].number_annexed + ' been update from the dashboard.')
+        sails.log('Error in Create the AnexosController : ')
         return res.json(data[0])
       }
     })
     .catch(err => {
-      sails.log(err)
+      sails.log('Error in update the AngetOnlineController : ' + err)
       return res.json(err)
     })
   },
 
   delete: function (req, res) {
     let query = {number_annexed: req.param('number_annexed')}
-
     agent_online.destroy(query)
     .then(data => {
       sails.log('The agent ' + data[0].number_annexed + ' has been remove from the dashboard.')
       return res.json(data[0].number_annexed)
     })
     .catch(err => {
-      sails.log(err)
+      sails.log('Error in delete the AngetOnlineController : ' + err)
       return res.json(err)
     })
   },
 
-  updateFrontEnd: function (req, name_event, res) {
-    let queryCompare = { number_annexed: req.param('anexo') }
-
-    return agent_online.update(queryCompare, { name_event: name_event })
+  updateFrontEnd: function (anexo, nameEvent) {
+    return new Promise((resolve, reject) => {
+      sails.log('Updating the event_name in the table agent_online para the dashboard')
+      let queryCompare = { number_annexed: anexo }
+      agent_online.update(queryCompare, { name_event: nameEvent })
       .then(record => {
-        agent_online.query('COMMIT')
-        return res.json({Response: 'success', Message: 'Inserted Event'})
+        return resolve(record[0])
       })
       .catch(err => {
-        return res.json({Response: 'error', Message: 'Fail Inserted Event'})
+        sails.log('Error in updateFrontEnd the AngetOnlineController : ' + err)
+        return reject(err)
       })
+    })
   }
 }

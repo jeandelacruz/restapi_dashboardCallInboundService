@@ -28,58 +28,104 @@ module.exports = {
   },
 
   actionsAmi: function (parameters) {
-    // console.log(parameters)
-    let client = new AmiClient({reconnect: false})
-    co(function * () {
-      yield client.connect('admin', 'admin', {host: '192.167.99.224', port: 5038})
-
-      let response = yield client.action(parameters, true)
-      sails.log(response)
-      client.disconnect()
-      return response
-    }).catch(error => {
-      return error
+    return new Promise((resolve, reject) => {
+      let client = new AmiClient({reconnect: false})
+      co(function * () {
+        yield client.connect('admin', 'admin', {host: '192.167.99.224', port: 5038})
+        let response = yield client.action(parameters, true)
+        // sails.log(response)
+        client.disconnect()
+        return resolve(response)
+      }).catch(error => {
+        return reject(error)
+      })
     })
   },
 
-  addremoveQueue: function (userID, typeActionACD, Action) {
-    var anexo = ''
-    var username = ''
-    users.search(userID)
-    .then(data_user => {
-      username = data_user.username
-      anexos.searchUserID(userID)
-      .then(data_anexo => {
-        anexo = data_anexo.name
-        usersQueues.searchUsersQueues(userID)
-        .then(dataUsersQueues => {
-          let parametros = ''
-          forEach(dataUsersQueues, item => {
-            queues.search(item.queue_id)
-            .then(dataQueues => {
-              if (typeActionACD) {
-                if (Action === 'QueueAdd') parametros = this.getEstructura('QueueAdd', dataQueues[0].name, anexo, username)
-                if (Action === 'QueueRemove') parametros = this.getEstructura('QueueRemove', dataQueues[0].name, anexo, null)
+  addremoveQueue: function (userID, typeActionACD, action) {
+    console.log('iniciando datos')
+    return new Promise((resolve, reject) => {
+      var anexo = ''
+      var username = ''
+      let array = []
+      users.search(userID)
+      .then(dataUser => {
+        username = dataUser.username
+        // if (data_user.role != 'user') return resolve(true)
+        anexos.searchUserID(userID)
+          .then(dataAnexo => {
+            anexo = dataAnexo.name
+            usersQueues.searchUsersQueues(userID)
+            .then(dataUsersQueues => {
+              let err = ''
+              if (dataUsersQueues.length === 0) {
+                return reject(err)
               } else {
-                parametros = this.getEstructura('QueuePause', null, anexo, null)
+                forEach(dataUsersQueues, item => {
+                  this.actionAsterisk(typeActionACD, item.queue_id, action, anexo, username)
+                  .then(datos => {
+                    this.addToArray(datos, array).then(function (data) { })
+                  })
+                  .catch(err => {
+                    return reject(err)
+                  })
+                })
+
+                setTimeout(function () {
+                  return resolve(array)
+                }, 2000)
               }
-              return this.actionsAmi(parametros)
             })
             .catch(err => {
-              return err
+              return reject(err)
             })
           })
+          .catch(err => {
+            return reject(err)
+          })
+      })
+      .catch(err => {
+        return reject(err)
+      })
+    })
+  },
+
+  actionAsterisk: function (typeActionACD, queueID, action, anexo, username) {
+    return new Promise((resolve, reject) => {
+      let parametros = ''
+      queues.search(queueID)
+      .then(data => {
+        if (typeActionACD) {
+          if (action === 'QueueAdd') parametros = this.getEstructura('QueueAdd', data[0].name, anexo, username)
+          if (action === 'QueueRemove') parametros = this.getEstructura('QueueRemove', data[0].name, anexo, null)
+        } else {
+          parametros = this.getEstructura('QueuePause', null, anexo, null)
+        }
+
+        return this.actionsAmi(parametros)
+        .then(data => {
+          return resolve(data)
         })
         .catch(err => {
-          return err
+          return reject(err)
         })
       })
       .catch(err => {
-        return err
+        return reject(err)
       })
     })
-    .catch(err => {
-      return err
+  },
+
+  addToArray: function (data, array) {
+    return new Promise((resolve, reject) => {
+      setTimeout(function () {
+        array.push(data)
+        resolve(array)
+      }, 1000)
+
+      if (!array) {
+        reject(new Error('No existe un array'))
+      }
     })
   },
 
@@ -113,5 +159,4 @@ module.exports = {
 
     return parametros
   }
-
 }

@@ -10,7 +10,6 @@ module.exports = {
       sails.log('Searching queue according to the queueID')
       queues.find({ id: queueID })
       .then(record => {
-        sails.log(record)
         return resolve(record)
       })
       .catch(err => {
