@@ -7,7 +7,6 @@
 const anexos = require('./anexosController')
 const eventos = require('./eventosController')
 const agentOnline = require('./agent_onlineController')
-const forEach = require('async-foreach').forEach
 
 module.exports = {
 
@@ -16,100 +15,79 @@ module.exports = {
 
     let typeActionACD = ''
     let fechaEvento = ''
+    let eventID = req.param('event_id')
+    let userID = req.param('user_id')
+    let ipCliente = req.param('ip')
+    let anexo = req.param('anexo')
+
     if (req.param('type_action') === 'disconnect') fechaEvento = req.param('hour_exit')
     if (req.param('old_event_id') === '11') typeActionACD = true
 
     fechaEvento = Helper.formatDate(new Date())
 
     let valuesEvent = {
-      evento_id: req.param('event_id'),
-      user_id: req.param('user_id'),
+      evento_id: eventID,
+      user_id: userID,
       fecha_evento: fechaEvento,
-      ip_cliente: req.param('ip'),
+      ip_cliente: ipCliente,
       observaciones: '',
-      anexo: req.param('anexo'),
+      anexo: anexo,
       date_really: Helper.formatDate(new Date())
     }
-    detalle_eventos.query('BEGIN', function (err) {
-      if (err) return res.json({ Response: 'error', Message: 'Failed Start Transaction - change_status' })
+    detalle_eventos.query('BEGIN', () => {
       detalle_eventos.create(valuesEvent)
         .then(data => {
-          /**
-          * [Verificamos cuando el evento es 15 (Desconexión) para remover los anexos]
-          */
           if (req.param('event_id') === 15) {
             return anexos.set_anexo(req, res)
           } else {
-            /**
-            * [Se busca el nombre del evento mediante el event_id]
-            */
-            return eventos.search(req.param('event_id'))
-            .then(recordEvento => {
-              /**
-              * [Parametro del estado del evento]
-              */
-              var eventID = recordEvento.estado_call_id
-              /**
-              * [Agregamos al asterisk con todas las colas asignadas al usuario. solo si es ACD]
-              */
-              if (eventID === 1) {
-                agentOnline.updateFrontEnd(req.param('anexo'), recordEvento.name)
+            this.actionChangeStatusDashboard(eventID, anexo)
+            .then(eventos => {
+              if (typeActionACD === true) {
+                Helper.addremoveQueue(userID, anexo, typeActionACD, 'QueueAdd')
                 .then(data => {
-                  Helper.addremoveQueue(req.param('user_id'), typeActionACD, 'QueueAdd')
-                  .then(data => {
-                    if (data === true) {
-                      Helper.socketEmmit(req.socket, req.param('anexo'), 'status_agent', sails.sockets.getId(req), recordEvento.name, recordEvento.id)
-                      Helper.responseMessage(res, 'success', 'Tu usuario no permite recibir llamadas')
-                      detalle_eventos.query('COMMIT')
-                    } else if (data === false) {
-                      Helper.responseMessage(res, 'error', data.Message)
-                      detalle_eventos.query('ROLLBACK')
-                    } else {
-                      Helper.socketEmmit(req.socket, req.param('anexo'), 'status_agent', sails.sockets.getId(req), recordEvento.name, recordEvento.id)
-                      Helper.responseMessage(res, data.Response.toLowerCase(), data.Message)
-                      detalle_eventos.query('COMMIT')
-                    }
+                  let flatAction = false
+                  data.forEach((array) => {
+                    if (array.Response === 'Success') flatAction = true
                   })
-                  .catch(err => {
-                    Helper.responseMessage(res, 'error', 'Usuario no cuenta con colas')
+                  /*
+                  if (data[0] === true) {
+                    Helper.socketEmmit(req.socket, req.param('anexo'), 'status_agent', sails.sockets.getId(req), recordEvento.name, recordEvento.id)
+                    Helper.responseMessage(res, 'success', 'Tu usuario no permite recibir llamadas')
+                    detalle_eventos.query('COMMIT')
+                  } else
+                  */
+                  if (flatAction === false) {
+                    Helper.responseMessage(res, 'Error', data)
                     detalle_eventos.query('ROLLBACK')
-                  })
+                  } else {
+                    Helper.socketEmmit(req.socket, req.param('anexo'), 'status_agent', sails.sockets.getId(req), eventos.name, eventos.id)
+                    Helper.responseMessage(res, 'Success', data)
+                    detalle_eventos.query('COMMIT')
+                  }
                 })
                 .catch(err => {
-                  Helper.responseMessage(res, 'error', 'Error al agregar a las colas')
+                  Helper.responseMessage(res, 'error', 'Usuario no cuenta con colas')
                   detalle_eventos.query('ROLLBACK')
                 })
               } else {
-                /**
-                * [Pausamos al usuario mediante el anexo]
-                */
-                let parametros = {
-                  Action: 'QueuePause',
-                  Interface: 'SIP/' + req.param('anexo'),
-                  Paused: '1'
-                }
-                agentOnline.updateFrontEnd(req.param('anexo'), recordEvento.name)
-                .then(data => {
-                  Helper.actionsAmi(parametros)
-                  .then(data => {
-                    if (data.Response === 'Error') {
-                      Helper.responseMessage(res, 'error', 'AST : ' + data.Message)
-                      detalle_eventos.query('ROLLBACK')
-                    } else {
-                      Helper.socketEmmit(req.socket, req.param('anexo'), 'status_agent', sails.sockets.getId(req), recordEvento.name, recordEvento.id)
-                      Helper.responseMessage(res, 'success', 'Pausado correctamente')
-                      detalle_eventos.query('COMMIT')
-                    }
-                  })
+                this.actionPause(eventos, anexo)
+                .then(msjPause => {
+                  if (data.Response === 'Error') {
+                    Helper.responseMessage(res, 'error', 'AST : ' + data.Message)
+                  } else {
+                    Helper.socketEmmit(req.socket, anexo, 'status_agent', sails.sockets.getId(req), eventos.name, eventos.id)
+                    Helper.responseMessage(res, 'success', msjPause + ' correctamente')
+                    detalle_eventos.query('COMMIT')
+                  }
                 })
                 .catch(err => {
-                  Helper.responseMessage(res, 'error', 'Error al pausar al usuario')
+                  return err
                   detalle_eventos.query('ROLLBACK')
                 })
               }
             })
             .catch(err => {
-              Helper.responseMessage(res, 'error', 'Fail Search Event')
+              return err
               detalle_eventos.query('ROLLBACK')
             })
           }
@@ -117,6 +95,49 @@ module.exports = {
         .catch(err => {
           Helper.responseMessage(res, 'error', 'Fail Inserted Event')
         })
+    })
+  },
+
+  actionPause: function (data, anexo) {
+    return new Promise((resolve, reject) => {
+      let statusPause = 1
+      let msjPause = 'Pausado'
+      if (data.estado_call_id === 1) {
+        statusPause = 0
+        msjPause = 'Despausado'
+      }
+
+      let parametros = {
+        Action: 'QueuePause',
+        Interface: 'SIP/' + anexo,
+        Paused: statusPause
+      }
+
+      Helper.actionsAmi(parametros)
+      .then(data => {
+        return resolve(msjPause)
+      })
+      .catch(err => {
+        return reject(err)
+      })
+    })
+  },
+
+  actionChangeStatusDashboard: function (eventID, anexo) {
+    return new Promise((resolve, reject) => {
+      eventos.search(eventID)
+      .then(eventos => {
+        agentOnline.updateFrontEnd(anexo, eventos.name)
+        .then(data => {
+          return resolve(eventos)
+        })
+        .catch(err => {
+          return reject(err)
+        })
+      })
+      .catch(err => {
+        return reject(err)
+      })
     })
   },
 

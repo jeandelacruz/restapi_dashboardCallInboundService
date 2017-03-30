@@ -14,7 +14,7 @@ module.exports = {
   },
 
   responseMessage: function (response, status, message) {
-    return response.json({ Response: status, Message: message })
+    return response.json({ Response: status.toLowerCase(), Message: message })
   },
 
   socketEmmit: function (socket, anexo, routeSocket, idSocket, nameEvent, eventoId) {
@@ -33,7 +33,7 @@ module.exports = {
       co(function * () {
         yield client.connect('admin', 'admin', {host: '192.167.99.224', port: 5038})
         let response = yield client.action(parameters, true)
-        // sails.log(response)
+        // sails.log(parameters)
         client.disconnect()
         return resolve(response)
       }).catch(error => {
@@ -42,47 +42,37 @@ module.exports = {
     })
   },
 
-  addremoveQueue: function (userID, typeActionACD, action) {
-    console.log('iniciando datos')
+  addremoveQueue: function (userID, anexo, typeActionACD, action) {
     return new Promise((resolve, reject) => {
-      var anexo = ''
       var username = ''
       let array = []
       users.search(userID)
       .then(dataUser => {
         username = dataUser.username
         // if (data_user.role != 'user') return resolve(true)
-        anexos.searchUserID(userID)
-          .then(dataAnexo => {
-            anexo = dataAnexo.name
-            usersQueues.searchUsersQueues(userID)
-            .then(dataUsersQueues => {
-              let err = ''
-              if (dataUsersQueues.length === 0) {
-                return reject(err)
-              } else {
-                forEach(dataUsersQueues, item => {
-                  this.actionAsterisk(typeActionACD, item.queue_id, action, anexo, username)
-                  .then(datos => {
-                    this.addToArray(datos, array).then(function (data) { })
-                  })
-                  .catch(err => {
-                    return reject(err)
-                  })
-                })
-
-                setTimeout(function () {
-                  return resolve(array)
-                }, 2000)
-              }
-            })
-            .catch(err => {
-              return reject(err)
-            })
-          })
-          .catch(err => {
+        usersQueues.searchUsersQueues(userID)
+        .then(dataUsersQueues => {
+          let err = ''
+          if (dataUsersQueues.length === 0) {
             return reject(err)
-          })
+          } else {
+            forEach(dataUsersQueues, item => {
+              this.actionAsterisk(typeActionACD, item.queue_id, action, anexo, username)
+              .then(datos => {
+                this.addToArray(datos, array).then(function (data) { })
+              })
+              .catch(err => {
+                return reject(err)
+              })
+            })
+            setTimeout(function () {
+              return resolve(array)
+            }, 2000)
+          }
+        })
+        .catch(err => {
+          return reject(err)
+        })
       })
       .catch(err => {
         return reject(err)
@@ -93,6 +83,7 @@ module.exports = {
   actionAsterisk: function (typeActionACD, queueID, action, anexo, username) {
     return new Promise((resolve, reject) => {
       let parametros = ''
+      console.log('Parametros para actionAsterisk : ' + queueID + '-' + action + '-' + anexo + '-' + username)
       queues.search(queueID)
       .then(data => {
         if (typeActionACD) {

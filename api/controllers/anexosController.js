@@ -20,17 +20,33 @@ module.exports = {
       /**
        * [Se usa cuando liberamos anexo o cuando procedemos a cerrar session]
        */
-      parameterSearch = { user_id: userID }
-      Helper.addremoveQueue(req.param('user_id'), true, 'QueueRemove')
-      this.update(parameterSearch, '0')
-      .then(data => {
-        if (data) {
-          Helper.responseMessage(res, 'success', 'Successfully released attachment')
+      Helper.addremoveQueue(userID, anexo, true, 'QueueRemove')
+      .then(dataRemove => {
+        let flatAction = false
+        dataRemove.forEach((array) => {
+          if (array.Response === 'Success') flatAction = true
+        })
+
+        if (flatAction === false) {
+          Helper.responseMessage(res, 'error', dataRemove)
         } else {
-          Helper.responseMessage(res, 'warning', 'The user does not have any assigned annexes')
+          parameterSearch = { user_id: userID }
+          this.update(parameterSearch, '0')
+          .then(data => {
+            if (data) {
+              Helper.responseMessage(res, 'success', dataRemove)
+            } else {
+              Helper.responseMessage(res, 'warning', 'The user does not have any assigned annexes')
+            }
+          })
+          .catch(err => {
+            Helper.responseMessage(res, 'error', 'Problemas para liberar anexo en la BD')
+            return err
+          })
         }
       })
       .catch(err => {
+        Helper.responseMessage(res, 'error', 'Problemas para liberar anexo de las Colas del Asterisk')
         return err
       })
     } else {
