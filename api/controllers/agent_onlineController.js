@@ -6,30 +6,21 @@
  */
 
 module.exports = {
-
-  updateOrCreate: function (req, res) {
+  searchAndUpdate: function (req, res) {
     let queryCompare = {number_annexed: req.param('number_annexed')}
     let dataUpdate = req.allParams()
-
     agent_online.update(queryCompare, dataUpdate)
     .then(data => {
       if (data.length === 0) {
-        return agent_online.create(req.allParams())
-        .then(data => {
-          sails.log('The agent ' + data.number_annexed + ' has been adding from the dashboard.')
-          return res.json(data)
-        })
-        .catch(err => {
-          sails.log('The agent has ' + data[0].number_annexed + ' been update from the dashboard.')
-          return res.json(err)
-        })
+        sails.log('The agent has ' + data[0].number_annexed + ' no existe en el dashboard.')
+        return res.json({Response: 'Error', Message: 'No existe anexo en el dashboard'})
       } else {
-        sails.log('Error in Create the AnexosController : ')
-        return res.json(data[0])
+        sails.log('The agent has ' + data[0].number_annexed + ' been update from the dashboard.')
+        return res.json({Response: 'Succes', Message: 'No existe anexo en el dashboard', DataAgent: data[0]})
       }
     })
     .catch(err => {
-      sails.log('Error in update the AngetOnlineController : ' + err)
+      sails.log('Error in searchAndUpdate the AgentOnlineController : ' + err)
       return res.json(err)
     })
   },

@@ -45,6 +45,7 @@ module.exports.connections = {
     host: '192.167.99.207',
     user: 'jcruz', // optional
     password: 'jeancruz', // optional
+    charset: 'utf8',
     database: 'prueba_laravel' // optional
   }
 

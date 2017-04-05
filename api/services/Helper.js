@@ -13,13 +13,13 @@ module.exports = {
     return dateFormat(date, 'yyyy-mm-dd H:MM:ss')
   },
 
-  responseMessage: function (response, status, message) {
-    return response.json({ Response: status.toLowerCase(), Message: message })
+  responseMessage: function (response, status, message, dataqueue = null) {
+    return response.json({ Response: status.toLowerCase(), Message: message, DataQueue: dataqueue })
   },
 
-  socketEmmit: function (socket, anexo, routeSocket, idSocket, nameEvent, eventoId) {
-    sails.sockets.join(socket, 'panel_agente:' + anexo)
-    sails.sockets.broadcast('panel_agente:' + anexo, routeSocket, {
+  socketEmmit: function (socket, routeSocket, idSocket, nameEvent, eventoId) {
+    sails.sockets.join(socket, 'panel_agente : ' + idSocket)
+    sails.sockets.broadcast('panel_agente : ' + idSocket, routeSocket, {
       Response: 'success',
       Socket: idSocket,
       Name_Event: nameEvent,
@@ -33,30 +33,49 @@ module.exports = {
       co(function * () {
         yield client.connect('admin', 'admin', {host: '192.167.99.224', port: 5038})
         let response = yield client.action(parameters, true)
-        // sails.log(parameters)
+        let arr = [parameters.Queue]
+        for (let prop in response) {
+          arr.push(response[prop])
+        }
+        let notice = arr[2]
+        let queue = arr[0]
+        let message = ''
+        let alert = ''
+        if (notice === 'Unable to remove interface: Not there') {
+          message = 'No se puede remover de ' + queue + ' : No existe'
+          alert = 'error'
+        } else if (notice === 'Added interface to queue') {
+          message = 'Agregado a la cola : ' + queue
+          alert = 'success'
+        } else if (notice === 'Unable to add interface: Already there') {
+          message = 'No se puede agregar a ' + queue + ' : Ya existe'
+          alert = 'warning'
+        } else if (notice === 'Removed interface from queue') {
+          message = 'Removido de la cola : ' + queue
+          alert = 'success'
+        } else {
+          message = 'Error al buscar mensaje'
+          alert = 'warning'
+        }
+        var json = { Response: arr[1], Message: message, Queue: queue }
         client.disconnect()
-        return resolve(response)
+        return resolve(json)
       }).catch(error => {
-        return reject(error)
+        return reject('Problema de conexion al Asterisk - AMI')
       })
     })
   },
 
-  addremoveQueue: function (userID, anexo, typeActionACD, action) {
+  addremoveQueue: function (userID, username, anexo, typeActionACD, action) {
     return new Promise((resolve, reject) => {
-      var username = ''
       let array = []
-      users.search(userID)
-      .then(dataUser => {
-        username = dataUser.username
-        // if (data_user.role != 'user') return resolve(true)
-        usersQueues.searchUsersQueues(userID)
+      usersQueues.searchUsersQueues(userID)
         .then(dataUsersQueues => {
           let err = ''
           if (dataUsersQueues.length === 0) {
             return reject(err)
           } else {
-            forEach(dataUsersQueues, item => {
+            dataUsersQueues.forEach((item) => {
               this.actionAsterisk(typeActionACD, item.queue_id, action, anexo, username)
               .then(datos => {
                 this.addToArray(datos, array).then(function (data) { })
@@ -73,10 +92,6 @@ module.exports = {
         .catch(err => {
           return reject(err)
         })
-      })
-      .catch(err => {
-        return reject(err)
-      })
     })
   },
 
@@ -89,8 +104,6 @@ module.exports = {
         if (typeActionACD) {
           if (action === 'QueueAdd') parametros = this.getEstructura('QueueAdd', data[0].name, anexo, username)
           if (action === 'QueueRemove') parametros = this.getEstructura('QueueRemove', data[0].name, anexo, null)
-        } else {
-          parametros = this.getEstructura('QueuePause', null, anexo, null)
         }
 
         return this.actionsAmi(parametros)
@@ -140,14 +153,37 @@ module.exports = {
       }
     }
 
-    if (actionsQueue === 'QueuePause') {
-      parametros = {
-        Action: 'QueuePause',
-        Interface: 'SIP/' + anexo,
-        Paused: '0'
-      }
-    }
-
     return parametros
+  },
+
+  getError: function (err) {
+    return new Promise((resolve, reject) => {
+      let error = err.details
+      let array = error.split(':')
+      sails.log(error)
+      if (array[2] === ' Could not connect to MySQL') {
+        reject(false)
+      } else if (array[2] === ' ER_TABLEACCESS_DENIED_ERROR') {
+        resolve(false)
+      } else {
+        resolve(true)
+      }
+    })
+  },
+
+  whileCase: function (arr, queue) {
+    return new Promise((resolve, reject) => {
+      if (notice === 'Unable to remove interface: Not there') {
+        message = 'No se puede remover de ' + queue + ' : No existe'
+      } else if (notice === 'Added interface to queue') {
+        message = 'Agregado a la cola : ' + queue
+      } else if (notice === 'Unable to add interface: Already there') {
+        message = 'No se puede agregar a ' + queue + ' : Ya existe'
+      } else if (notice === 'Removed interface from queue') {
+        message = 'Removido de la cola : ' + queue
+      } else {
+        message = 'Error al buscar mensaje'
+      }
+    })
   }
 }

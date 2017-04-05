@@ -10,103 +10,164 @@ const agentOnline = require('./agent_onlineController')
 
 module.exports = {
 
-  change_status: function (req, res) {
-    if (!req.param('user_id') || !req.param('event_id') || !req.param('anexo') || !req.param('ip')) return res.json({Response: 'error', Message: 'Parameters incompleted'})
-
-    let typeActionACD = ''
-    let fechaEvento = ''
+  cambiarEstado: function (req, res) {
     let eventID = req.param('event_id')
     let userID = req.param('user_id')
     let ipCliente = req.param('ip')
-    let anexo = req.param('anexo')
+    let anexo = req.param('number_annexed')
+    let username = req.param('username')
 
-    if (req.param('type_action') === 'disconnect') fechaEvento = req.param('hour_exit')
-    if (req.param('old_event_id') === '11') typeActionACD = true
+    this.actionChangeStatusDashboard(eventID, anexo)
+    .then(eventos => {
+      Helper.addremoveQueue(userID, username, anexo, true, 'QueueAdd')
+      .then(data => {
+        let flatAction = false
+        data.forEach((array) => {
+          if (array.Response === 'Success') flatAction = true
+        })
+        if (flatAction === false) {
+          Helper.responseMessage(res, 'Error', 'Error al agregar al Asterisk', data)
+        } else {
+          Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), eventos.name, eventos.id)
+          this.create(eventos.id, userID, Helper.formatDate(new Date()), ipCliente, anexo).then(data => { })
+          Helper.responseMessage(res, 'success', 'Se agrego correctamente al Asterisk', data)
+        }
+      })
+      .catch(err => {
+        Helper.responseMessage(res, 'error', err)
+      })
+    })
+    .catch(err => {
+      Helper.getError(err)
+      .then(data => {
+        let message = ''
+        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Error al buscar el evento' }
+        Helper.responseMessage(res, 'error', message)
+      })
+      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
+    })
+  },
 
-    fechaEvento = Helper.formatDate(new Date())
+  QueuePause: function (req, res) {
+    let eventID = req.param('event_id')
+    let userID = req.param('user_id')
+    let ipCliente = req.param('ip')
+    let anexo = req.param('number_annexed')
 
-    let valuesEvent = {
-      evento_id: eventID,
-      user_id: userID,
-      fecha_evento: fechaEvento,
-      ip_cliente: ipCliente,
-      observaciones: '',
-      anexo: anexo,
-      date_really: Helper.formatDate(new Date())
-    }
-    detalle_eventos.query('BEGIN', () => {
-      detalle_eventos.create(valuesEvent)
-        .then(data => {
-          if (req.param('event_id') === 15) {
-            return anexos.set_anexo(req, res)
-          } else {
-            this.actionChangeStatusDashboard(eventID, anexo)
-            .then(eventos => {
-              if (typeActionACD === true) {
-                Helper.addremoveQueue(userID, anexo, typeActionACD, 'QueueAdd')
-                .then(data => {
-                  let flatAction = false
-                  data.forEach((array) => {
-                    if (array.Response === 'Success') flatAction = true
-                  })
-                  /*
-                  if (data[0] === true) {
-                    Helper.socketEmmit(req.socket, req.param('anexo'), 'status_agent', sails.sockets.getId(req), recordEvento.name, recordEvento.id)
-                    Helper.responseMessage(res, 'success', 'Tu usuario no permite recibir llamadas')
-                    detalle_eventos.query('COMMIT')
-                  } else
-                  */
-                  if (flatAction === false) {
-                    Helper.responseMessage(res, 'Error', data)
-                    detalle_eventos.query('ROLLBACK')
-                  } else {
-                    Helper.socketEmmit(req.socket, req.param('anexo'), 'status_agent', sails.sockets.getId(req), eventos.name, eventos.id)
-                    Helper.responseMessage(res, 'Success', data)
-                    detalle_eventos.query('COMMIT')
-                  }
-                })
-                .catch(err => {
-                  Helper.responseMessage(res, 'error', 'Usuario no cuenta con colas')
-                  detalle_eventos.query('ROLLBACK')
-                })
-              } else {
-                this.actionPause(eventos, anexo)
-                .then(msjPause => {
-                  if (data.Response === 'Error') {
-                    Helper.responseMessage(res, 'error', 'AST : ' + data.Message)
-                  } else {
-                    Helper.socketEmmit(req.socket, anexo, 'status_agent', sails.sockets.getId(req), eventos.name, eventos.id)
-                    Helper.responseMessage(res, 'success', msjPause + ' correctamente')
-                    detalle_eventos.query('COMMIT')
-                  }
-                })
-                .catch(err => {
-                  return err
-                  detalle_eventos.query('ROLLBACK')
-                })
-              }
-            })
-            .catch(err => {
-              return err
-              detalle_eventos.query('ROLLBACK')
-            })
+    this.actionChangeStatusDashboard(eventID, anexo)
+    .then(eventos => {
+      this.actionPause(eventos, anexo)
+      .then(data => {
+        let flatAction = false
+        data.forEach((array) => {
+          if (array.Response === 'Success') flatAction = true
+        })
+        if (flatAction === false) {
+          Helper.responseMessage(res, 'Error', 'Error al pausar al agente', data)
+        } else {
+          let msjPause = 'Pausado'
+          if (eventos.estado_call_id === 1) {
+            msjPause = 'Despausado'
           }
+          Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), eventos.name, eventos.id)
+          this.create(eventos.id, userID, Helper.formatDate(new Date()), ipCliente, anexo).then(data => { })
+          Helper.responseMessage(res, 'success', msjPause + ' correctamente')
+        }
+      })
+      .catch(err => {
+        sails.log(err)
+        Helper.responseMessage(res, 'error', err)
+      })
+    })
+    .catch(err => {
+      Helper.getError(err)
+      .then(data => {
+        let message = ''
+        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Error al buscar el evento' }
+        Helper.responseMessage(res, 'error', message)
+      })
+      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
+    })
+  },
+
+  registrarDetalle: function (req, res) {
+    let eventID = req.param('event_id')
+    let userID = req.param('user_id')
+    let ipCliente = req.param('ip')
+    let anexo = req.param('number_annexed')
+    this.actionChangeStatusDashboard(eventID, anexo)
+    .then(eventos => {
+      this.create(eventos.id, userID, Helper.formatDate(new Date()), ipCliente, anexo)
+      .then(data => {
+        Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), eventos.name, eventos.id)
+        Helper.responseMessage(res, 'success', 'Evento Registrado Exitosamente')
+      })
+      .catch(err => {
+        Helper.responseMessage(res, 'error', 'Error al registrar el evento')
+      })
+    })
+    .catch(err => {
+      Helper.getError(err)
+      .then(data => {
+        let message = ''
+        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Error al buscar el evento' }
+        Helper.responseMessage(res, 'error', message)
+      })
+      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
+    })
+  },
+
+  queueLogout: function (req, res) {
+    let dateExit = req.param('hour_exit')
+    let eventID = req.param('event_id')
+    let userID = req.param('user_id')
+    let ipCliente = req.param('ip')
+    let anexo = req.param('number_annexed')
+    let username = req.param('username')
+
+    this.actionChangeStatusDashboard(eventID, anexo)
+    .then(eventos => {
+      Helper.addremoveQueue(userID, username, anexo, true, 'QueueRemove')
+      .then(data => {
+        let flatAction = false
+        data.forEach((array) => {
+          if (array.Response === 'Success') flatAction = true
         })
-        .catch(err => {
-          Helper.responseMessage(res, 'error', 'Fail Inserted Event')
-        })
+        if (flatAction === false) {
+          Helper.responseMessage(res, 'Error', 'Error al desconectar del Asterisk', data)
+        } else {
+          Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), eventos.name, eventos.id)
+          this.create(eventos.id, userID, dateExit, ipCliente, anexo)
+          .then(data => { })
+          .catch(err => { })
+          Helper.responseMessage(res, 'Success', 'Se desconecto correctamente del Asterisk', data)
+          anexos.update(userID)
+          .then(data => { })
+          .catch(err => { })
+        }
+      })
+      .catch(err => {
+        Helper.responseMessage(res, 'error', 'Usuario no cuenta con colas')
+      })
+    })
+    .catch(err => {
+      Helper.getError(err)
+      .then(data => {
+        let message = ''
+        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Error al desconectarte' }
+        Helper.responseMessage(res, 'error', message)
+      })
+      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
     })
   },
 
   actionPause: function (data, anexo) {
     return new Promise((resolve, reject) => {
+      let array = []
       let statusPause = 1
-      let msjPause = 'Pausado'
       if (data.estado_call_id === 1) {
         statusPause = 0
-        msjPause = 'Despausado'
       }
-
       let parametros = {
         Action: 'QueuePause',
         Interface: 'SIP/' + anexo,
@@ -115,11 +176,16 @@ module.exports = {
 
       Helper.actionsAmi(parametros)
       .then(data => {
-        return resolve(msjPause)
+        // return resolve(data)
+        Helper.addToArray(data, array).then(function (data) { })
       })
       .catch(err => {
         return reject(err)
       })
+
+      setTimeout(function () {
+        return resolve(array)
+      }, 2000)
     })
   },
 
@@ -161,14 +227,20 @@ module.exports = {
     .then(record_findone => {
       return eventos.search(record_findone.evento_id)
       .then(recordEvento => {
-        Helper.socketEmmit(req.socket, req.param('anexo'), 'status_agent', sails.sockets.getId(req), recordEvento.name, recordEvento.id)
+        Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), recordEvento.name, recordEvento.id)
       })
       .catch(err => {
         Helper.responseMessage(res, 'error', 'Fail Search Event')
       })
     })
     .catch(err => {
-      Helper.responseMessage(res, 'error', 'Fail Search Event')
+      Helper.getError(err)
+      .then(data => {
+        let message = ''
+        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Fail Search Event' }
+        Helper.responseMessage(res, 'error', message)
+      })
+      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
     })
   },
 
@@ -221,7 +293,34 @@ module.exports = {
       })
     })
     .catch(err => {
-      Helper.responseMessage(res, 'error', 'Fail Count Records')
+      Helper.getError(err)
+      .then(data => {
+        let message = ''
+        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Fail Count Records' }
+        Helper.responseMessage(res, 'error', message)
+      })
+      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
+    })
+  },
+
+  create: function (evento_id, user_id, fecha_evento, ip_cliente, anexo = 0) {
+    return new Promise((resolve, reject) => {
+      let valuesEvent = {
+        evento_id: evento_id,
+        user_id: user_id,
+        fecha_evento: fecha_evento,
+        ip_cliente: ip_cliente,
+        observaciones: '',
+        anexo: anexo,
+        date_really: Helper.formatDate(new Date())
+      }
+      detalle_eventos.create(valuesEvent)
+      .then(data => {
+        return resolve(data)
+      })
+      .catch(err => {
+        return reject(err)
+      })
     })
   }
 }
