@@ -1,11 +1,9 @@
 const co = require('co')
 const dateFormat = require('dateformat')
-const forEach = require('async-foreach').forEach
 const AmiClient = require('asterisk-ami-client')
-const users = require('../controllers/usersController')
-const anexos = require('../controllers/anexosController')
 const queues = require('../controllers/queuesController')
 const usersQueues = require('../controllers/users_queuesController')
+const iosocket = require('socket.io-client')
 
 module.exports = {
 
@@ -15,6 +13,15 @@ module.exports = {
 
   responseMessage: function (response, status, message, dataqueue = null) {
     return response.json({ Response: status.toLowerCase(), Message: message, DataQueue: dataqueue })
+  },
+
+  socketDashboard: function (username, anexo, userId) {
+    const socketAsterisk = iosocket.connect('http://192.167.99.246:3363', { 'forceNew': true })
+    socketAsterisk.emit('createAgent', {
+      anexo: anexo,
+      username: username,
+      userid: userId
+    })
   },
 
   socketEmmit: function (socket, routeSocket, idSocket, nameEvent, eventoId) {
@@ -31,7 +38,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       let client = new AmiClient({reconnect: false})
       co(function * () {
-        yield client.connect('admin', 'admin', {host: '192.167.99.224', port: 5038})
+        yield client.connect('dashboard', 'Ja#a4tuP', {host: '192.167.99.227', port: 5038})
         let response = yield client.action(parameters, true)
         let arr = [parameters.Queue]
         for (let prop in response) {
@@ -54,14 +61,14 @@ module.exports = {
           message = 'Removido de la cola : ' + queue
           alert = 'success'
         } else {
-          message = 'Error al buscar mensaje'
+          message = arr[2]
           alert = 'warning'
         }
         var json = { Response: arr[1], Message: message, Queue: queue }
         client.disconnect()
         return resolve(json)
-      }).catch(error => {
-        return reject('Problema de conexion al Asterisk - AMI')
+      }).catch(err => {
+        return reject('Problema de conexion al Asterisk - AMI' + err)
       })
     })
   },

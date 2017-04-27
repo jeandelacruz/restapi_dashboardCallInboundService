@@ -34,11 +34,6 @@ module.exports = {
       require: true
     },
 
-    agente_id: {
-      type: 'integer',
-      require: true
-    },
-
     email: {
       type: 'string',
       require: true

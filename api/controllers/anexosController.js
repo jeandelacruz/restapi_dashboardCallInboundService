@@ -13,6 +13,8 @@ module.exports = {
   updateAnexo: function (req, res) {
     let anexo = req.param('number_annexed')
     let userId = req.param('user_id')
+    let username = req.param('username')
+    let userRol = req.param('userRol')
     anexos.find({ name: anexo })
       .then(data => {
         if (data.length === 0) {
@@ -22,6 +24,10 @@ module.exports = {
           anexos.update({ name: anexo }, { user_id: userId })
           .then(record => {
             sails.log('updateAnexo: Anexo ' + anexo + ' actualizado con exito con el usuario ' + userId)
+            console.log(userRol.toLowerCase())
+            if (userRol.toLowerCase() === 'user') {
+              Helper.socketDashboard(username, anexo, userId)
+            }
             Helper.responseMessage(res, 'success', 'Anexo actualizado')
           })
           .catch(err => {
@@ -146,20 +152,6 @@ module.exports = {
       .catch(err => {
         return reject(err)
       })
-    })
-  },
-
-  actionStatus: function (req, res) {
-    let parametros = {
-      Action: 'QueueStatus',
-      Member: req.param('user_id')
-    }
-    Helper.actionsAmi(parametros)
-    .then(data => {
-      res.send(data)
-    })
-    .catch(err => {
-      res.send(err)
     })
   }
 }

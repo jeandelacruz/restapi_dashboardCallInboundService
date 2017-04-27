@@ -222,7 +222,6 @@ module.exports = {
     /**
     * [Buscamos el nombre del evento mediante el event_id y lo emitimos en el socket io]
     */
-
     detalle_eventos.findOne(query)
     .then(record_findone => {
       return eventos.search(record_findone.evento_id)
@@ -322,5 +321,21 @@ module.exports = {
         return reject(err)
       })
     })
+  },
+
+  createEvent: function (req, res) {
+    let valuesEvent = {
+      evento_id: req.param('event_id'),
+      user_id: req.param('user_id'),
+      fecha_evento: req.param('fecha_evento'),
+      ip_cliente: req.param('ip'),
+      observaciones: req.param('observaciones'),
+      anexo: req.param('number_annexed'),
+      date_really: Helper.formatDate(new Date())
+    }
+
+    detalle_eventos.create(valuesEvent)
+      .then(data => Helper.responseMessage(res, 'success', 'Evento Creado correctamente'))
+      .catch(err => Helper.responseMessage(res, 'error', err))
   }
 }

@@ -54,6 +54,18 @@ module.exports = {
 
     ringinuse_agent: {
       type: 'string'
+    },
+
+    user_id: {
+      type: 'string'
+    },
+
+    event_id: {
+      type: 'string'
+    },
+
+    observaciones: {
+      type: 'string'
     }
 
   },
