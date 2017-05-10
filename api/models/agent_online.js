@@ -8,66 +8,22 @@
 module.exports = {
 
   attributes: {
-
-    number_annexed: {
-      type: 'string',
-      required: true
-    },
-
-    name_agent: {
-      type: 'string'
-    },
-
-    name_event: {
-      type: 'string',
-      required: true,
-      defaultsTo: 'Login'
-    },
-
-    name_queue_inbound: {
-      type: 'string'
-    },
-
-    phone_number_inbound: {
-      type: 'string'
-    },
-
-    star_call_inbound: {
-      type: 'string'
-    },
-
-    total_calls: {
-      type: 'string'
-    },
-
-    name_queue: {
-      type: 'string'
-    },
-
-    status_pause: {
-      type: 'string'
-    },
-
-    penalty_agent: {
-      type: 'string'
-    },
-
-    ringinuse_agent: {
-      type: 'string'
-    },
-
-    user_id: {
-      type: 'string'
-    },
-
-    event_id: {
-      type: 'string'
-    },
-
-    observaciones: {
-      type: 'string'
-    }
-
+    agent_user_id: { type: 'string' },
+    agent_name: { type: 'string' },
+    agent_annexed: { type: 'string' },
+    agent_status: { type: 'string' },
+    agent_penality: { type: 'string' },
+    agent_total_calls: { type: 'string' },
+    event_id: { type: 'string' },
+    event_id_old: { type: 'string' },
+    event_name: { type: 'string' },
+    event_observaciones: { type: 'string' },
+    event_time: { type: 'string' },
+    inbound_queue: { type: 'string' },
+    inbound_phone: { type: 'string' },
+    inbound_start: { type: 'string' },
+    outbound_phone: { type: 'string' },
+    outbound_start: { type: 'string' }
   },
 
   autoCreatedAt: false,

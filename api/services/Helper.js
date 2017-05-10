@@ -16,7 +16,7 @@ module.exports = {
   },
 
   socketDashboard: function (username, anexo, userId) {
-    const socketAsterisk = iosocket.connect('http://192.167.99.246:3363', { 'forceNew': true })
+    const socketAsterisk = iosocket.connect('http://127.0.0.1:3368', { 'forceNew': true })
     socketAsterisk.emit('createAgent', {
       anexo: anexo,
       username: username,
@@ -38,7 +38,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       let client = new AmiClient({reconnect: false})
       co(function * () {
-        yield client.connect('dashboard', 'Ja#a4tuP', {host: '192.167.99.227', port: 5038})
+        yield client.connect('dashboard', 'Ja#a4tuP', {host: '192.167.99.224', port: 5038})
         let response = yield client.action(parameters, true)
         let arr = [parameters.Queue]
         for (let prop in response) {
@@ -47,24 +47,47 @@ module.exports = {
         let notice = arr[2]
         let queue = arr[0]
         let message = ''
-        let alert = ''
-        if (notice === 'Unable to remove interface: Not there') {
-          message = 'No se puede remover de ' + queue + ' : No existe'
-          alert = 'error'
-        } else if (notice === 'Added interface to queue') {
-          message = 'Agregado a la cola : ' + queue
-          alert = 'success'
-        } else if (notice === 'Unable to add interface: Already there') {
-          message = 'No se puede agregar a ' + queue + ' : Ya existe'
-          alert = 'warning'
-        } else if (notice === 'Removed interface from queue') {
-          message = 'Removido de la cola : ' + queue
-          alert = 'success'
-        } else {
-          message = arr[2]
-          alert = 'warning'
+        let alert = arr[1]
+        console.log(notice)
+        switch (notice) {
+          case 'Unable to remove interface: Not there':
+            message = 'No exists annexed in queue : ' + queue
+            alert = 'NoNotification'
+            break
+          case 'Added interface to queue':
+            message = 'Add in queue : ' + queue
+            alert = 'Success'
+            break
+          case 'Unable to add interface: Already there':
+            message = 'Exist in queue : ' + queue
+            alert = 'NoNotification'
+            break
+          case 'Removed interface from queue':
+            message = 'Remove of queue : ' + queue
+            alert = 'Success'
+            break
+          case 'Unable to add interface to queue: No such queue':
+            message = 'No exists queue : ' + queue
+            alert = 'Error'
+            break
+          case 'Unable to remove interface from queue: No such queue':
+            message = 'No exists queue : ' + queue
+            alert = 'Error'
+            break
+          case 'Interface paused successfully':
+            message = 'Paussed agent in queue: ' + queue
+            alert = 'NoNotification'
+            break
+          case 'Interface unpaused successfully':
+            message = 'Unpaussed agent in queue: ' + queue
+            alert = 'NoNotification'
+            break
+          default:
+            message = arr[2]
+            alert = 'Warning'
         }
-        var json = { Response: arr[1], Message: message, Queue: queue }
+
+        var json = { Response: alert, Message: message, Queue: queue }
         client.disconnect()
         return resolve(json)
       }).catch(err => {
@@ -83,7 +106,7 @@ module.exports = {
             return reject(err)
           } else {
             dataUsersQueues.forEach((item) => {
-              this.actionAsterisk(typeActionACD, item.queue_id, action, anexo, username)
+              this.actionAsterisk(typeActionACD, item.queue_id, action, anexo, username, item.priority)
               .then(datos => {
                 this.addToArray(datos, array).then(function (data) { })
               })
@@ -102,15 +125,15 @@ module.exports = {
     })
   },
 
-  actionAsterisk: function (typeActionACD, queueID, action, anexo, username) {
+  actionAsterisk: function (typeActionACD, queueID, action, anexo, username, priority = 1) {
     return new Promise((resolve, reject) => {
       let parametros = ''
       console.log('Parametros para actionAsterisk : ' + queueID + '-' + action + '-' + anexo + '-' + username)
       queues.search(queueID)
       .then(data => {
         if (typeActionACD) {
-          if (action === 'QueueAdd') parametros = this.getEstructura('QueueAdd', data[0].name, anexo, username)
-          if (action === 'QueueRemove') parametros = this.getEstructura('QueueRemove', data[0].name, anexo, null)
+          if (action === 'QueueAdd') parametros = this.getEstructura('QueueAdd', data[0].name, anexo, username, priority)
+          if (action === 'QueueRemove') parametros = this.getEstructura('QueueRemove', data[0].name, anexo, null, null)
         }
 
         return this.actionsAmi(parametros)
@@ -140,7 +163,7 @@ module.exports = {
     })
   },
 
-  getEstructura: function (actionsQueue, nameQueue, anexo, username) {
+  getEstructura: function (actionsQueue, nameQueue, anexo, username, priority = 1) {
     let parametros = ''
     if (actionsQueue === 'QueueAdd') {
       parametros = {
@@ -148,6 +171,7 @@ module.exports = {
         Queue: nameQueue,
         Interface: 'SIP/' + anexo,
         Paused: '0',
+        Penalty: priority,
         MemberName: 'Agent/' + username
       }
     }
@@ -176,7 +200,9 @@ module.exports = {
         resolve(true)
       }
     })
-  },
+  }
+
+  /*,
 
   whileCase: function (arr, queue) {
     return new Promise((resolve, reject) => {
@@ -193,4 +219,5 @@ module.exports = {
       }
     })
   }
+  */
 }

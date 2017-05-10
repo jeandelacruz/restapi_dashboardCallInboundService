@@ -65,21 +65,23 @@ module.exports = {
     let eventName = req.param('event_name')
     let ipCliente = req.param('ip')
     let username = req.param('username')
+    let statusQueueRemove = req.param('statusQueueRemove')
     anexos.update({ user_id: userId }, { user_id: 0 })
       .then(data => {
         if (data.length === 0) {
           sails.log('liberarAnexo: No se encuentra el user_id : ' + userId)
           Helper.responseMessage(res, 'error', 'No cuentas con un anexo asignado')
         } else {
-          if (anexo != undefined) {
+          if (statusQueueRemove === true) {
             Helper.addremoveQueue(userId, username, anexo, true, 'QueueRemove')
             .then(data => {
               let flatAction = false
               data.forEach((array) => {
                 if (array.Response === 'Success') flatAction = true
+                if (array.Response === 'NoNotification') flatAction = true
               })
               if (flatAction === false) {
-                Helper.responseMessage(res, 'error', 'Al remover anexo de las colas del Asterisk', data)
+                Helper.responseMessage(res, 'success', 'Se removio anexo de las colas del Asterisk', data)
               } else {
                 Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), eventName, eventId)
                 Helper.responseMessage(res, 'success', 'Se libero el anexo correctamente', data)
@@ -118,7 +120,8 @@ module.exports = {
     let userID = req.param('user_id')
     let ipCliente = req.param('ip')
     let anexo = req.param('number_annexed')
-    let fechaEvento = Helper.formatDate(new Date())
+    // let fechaEvento = Helper.formatDate(new Date())
+    let fechaEvento = req.param('hour_exit')
     anexos.update({ user_id: userID }, { user_id: 0 })
     .then(data => {
       detalle_eventos.create(eventID, userID, fechaEvento, ipCliente, anexo)

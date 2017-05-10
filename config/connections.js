@@ -42,11 +42,11 @@ module.exports.connections = {
   ***************************************************************************/
   someMysqlServer: {
     adapter: 'sails-mysql',
-    host: 'balanceo_basedatos',
+    host: '192.167.99.207',
     user: 'buenaven_nodejs', // optional
     password: '6ASufrAd', // optional
     charset: 'utf8',
-    database: 'buenaventura' // optional
+    database: 'prueba_laravel' // optional
   }
 
   /***************************************************************************

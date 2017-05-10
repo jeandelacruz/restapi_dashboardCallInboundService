@@ -23,14 +23,6 @@ module.exports = {
 
     start_call: {
       type: 'string'
-    },
-
-    number_annexed: {
-      type: 'string'
-    },
-
-    name_agent: {
-      type: 'string'
     }
 
   },

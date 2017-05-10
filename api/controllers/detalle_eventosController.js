@@ -24,6 +24,7 @@ module.exports = {
         let flatAction = false
         data.forEach((array) => {
           if (array.Response === 'Success') flatAction = true
+          if (array.Response === 'NoNotification') flatAction = true
         })
         if (flatAction === false) {
           Helper.responseMessage(res, 'Error', 'Error al agregar al Asterisk', data)
@@ -61,6 +62,7 @@ module.exports = {
         let flatAction = false
         data.forEach((array) => {
           if (array.Response === 'Success') flatAction = true
+          if (array.Response === 'NoNotification') flatAction = true
         })
         if (flatAction === false) {
           Helper.responseMessage(res, 'Error', 'Error al pausar al agente', data)
@@ -175,13 +177,8 @@ module.exports = {
       }
 
       Helper.actionsAmi(parametros)
-      .then(data => {
-        // return resolve(data)
-        Helper.addToArray(data, array).then(function (data) { })
-      })
-      .catch(err => {
-        return reject(err)
-      })
+      .then(data => Helper.addToArray(data, array).then(function (data) { }))
+      .catch(err => reject(err))
 
       setTimeout(function () {
         return resolve(array)
@@ -193,17 +190,11 @@ module.exports = {
     return new Promise((resolve, reject) => {
       eventos.search(eventID)
       .then(eventos => {
-        agentOnline.updateFrontEnd(anexo, eventos.name)
-        .then(data => {
-          return resolve(eventos)
-        })
-        .catch(err => {
-          return reject(err)
-        })
+        agentOnline.updateFrontEnd(anexo, eventos.name, eventos.id)
+        .then(data => resolve(eventos))
+        .catch(err => reject(err))
       })
-      .catch(err => {
-        return reject(err)
-      })
+      .catch(err => reject(err))
     })
   },
 
@@ -326,11 +317,11 @@ module.exports = {
   createEvent: function (req, res) {
     let valuesEvent = {
       evento_id: req.param('event_id'),
-      user_id: req.param('user_id'),
-      fecha_evento: req.param('fecha_evento'),
+      user_id: req.param('agent_user_id'),
+      fecha_evento: req.param('event_time'),
       ip_cliente: req.param('ip'),
-      observaciones: req.param('observaciones'),
-      anexo: req.param('number_annexed'),
+      observaciones: req.param('event_observaciones'),
+      anexo: req.param('agent_annexed'),
       date_really: Helper.formatDate(new Date())
     }
 
