@@ -43,11 +43,12 @@ module.exports.sockets = {
   // -OR-
   //
 
-  adapter: 'socket.io-redis',
-  host: '127.0.0.1',
-  port: 6388,
+  adapter: process.env.socketsAdapter || 'adapter_session',
+
+  host: process.env.sessionHost || 'localhost',
+  port: process.env.sessionPort || 6379,
   db: 0,
-  pass: 'cosapida3slomasfacil',
+  pass: process.env.sessionPass || 'password',
 
  /***************************************************************************
   *                                                                          *

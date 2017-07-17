@@ -7,15 +7,9 @@
 module.exports = {
   searchUsersQueues: function (userID) {
     return new Promise((resolve, reject) => {
-      sails.log('Searching user in queues asigning the according to the queueID')
       users_queues.find({user_id: userID})
-      .then(record => {
-        return resolve(record)
-      })
-      .catch(err => {
-        sails.log('Error in searchUsersQueues the UserQueuesController : ' + err)
-        return reject(err)
-      })
+      .then(record => resolve(record))
+      .catch(err => reject(err))
     })
   }
 }

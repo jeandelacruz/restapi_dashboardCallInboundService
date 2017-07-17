@@ -9,6 +9,7 @@ module.exports = {
 
   attributes: {
     agent_user_id: { type: 'string' },
+    agent_role: { type: 'string' },
     agent_name: { type: 'string' },
     agent_annexed: { type: 'string' },
     agent_status: { type: 'string' },
@@ -23,7 +24,13 @@ module.exports = {
     inbound_phone: { type: 'string' },
     inbound_start: { type: 'string' },
     outbound_phone: { type: 'string' },
-    outbound_start: { type: 'string' }
+    outbound_start: { type: 'string' },
+    second_outbound_phone: { type: 'string' },
+    second_outbound_start: { type: 'string' },
+    second_event_id: { type: 'string' },
+    second_event_name: { type: 'string' },
+    timeElapsed: { type: 'string' },
+    transfer: { type: 'string' }
   },
 
   autoCreatedAt: false,

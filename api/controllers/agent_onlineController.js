@@ -9,12 +9,8 @@ module.exports = {
 
   search: function (req, res) {
     let queryAgent = { where: { agent_annexed: req.param('agent_annexed') } }
-    agent_online.findOne(queryAgent)
-    .then(record => res.json(record))
-    .catch(err => {
-      sails.log('Error in Search the UsersController : ' + err)
-      return res.json(err)
-    })
+    agent_online.findOne(queryAgent).then(record => res.json(record))
+    .catch(err => res.json(err))
   },
 
   searchAndUpdate: function (req, res) {
@@ -24,23 +20,14 @@ module.exports = {
       let queryCompare = {agent_annexed: req.param('agent_annexed')}
       let dataUpdate = req.allParams()
       if (record.event_id !== dataUpdate.event_id_old) dataUpdate.event_id_old = record.event_id
-
       agent_online.update(queryCompare, dataUpdate)
       .then(data => {
-        sails.log('The agent has ' + data[0].agent_annexed + ' been update from the dashboard.')
-        data[0].timeElapsed = '0'
-        data[0].total_call = '0'
+        data[0].total_call = 0
         return res.json(data[0])
       })
-      .catch(err => {
-        sails.log('Error in searchAndUpdate the AgentOnlineController : ' + err)
-        return res.json(err)
-      })
+      .catch(err => res.json(err))
     })
-    .catch(err => {
-      sails.log('Error in Search the UsersController : ' + err)
-      return res.json(err)
-    })
+    .catch(err => res.json(err))
   },
 
   updatePause: function (req, res) {
@@ -48,55 +35,84 @@ module.exports = {
     let dataUpdate = req.allParams()
     agent_online.update(queryCompare, dataUpdate)
     .then(data => {
-      sails.log('The agent has ' + data[0].agent_annexed + ' been update from the dashboard.')
-      data[0].timeElapsed = '0'
       data[0].total_call = '0'
       return res.json(data[0])
     })
-    .catch(err => {
-      sails.log('Error in searchAndUpdate the AgentOnlineController : ' + err)
-      return res.json(err)
-    })
+    .catch(err => res.json(err))
   },
 
   delete: function (req, res) {
-    let query = {agent_annexed: req.param('agent_annexed')}
-    agent_online.destroy(query)
-    .then(data => {
-      sails.log('The agent ' + data[0].agent_annexed + ' has been remove from the dashboard.')
-      return res.json(data[0])
-    })
-    .catch(err => {
-      sails.log('Error in delete the AngetOnlineController : ' + err)
-      return res.json(err)
-    })
+    let query = {agent_user_id: req.param('user_id')}
+    agent_online.destroy(query).then(data => res.json(data[0]))
+    .catch(err => res.json(err))
   },
 
-  updateFrontEnd: function (anexo, eventName, eventID) {
+  deleteUserID: function (userID) {
     return new Promise((resolve, reject) => {
-      sails.log('Updating the event_name in the table agent_online para the dashboard')
-      let queryCompare = { agent_annexed: anexo }
-      agent_online.update(queryCompare, { event_name: eventName, event_id: eventID })
-      .then(record => {
-        return resolve(record[0])
-      })
-      .catch(err => {
-        sails.log('Error in updateFrontEnd the AngetOnlineController : ' + err)
-        return reject(err)
-      })
+      let query = {agent_user_id: userID}
+      agent_online.destroy(query).then(data => resolve(data[0]))
+      .catch(err => reject(err))
     })
   },
 
   updateFrontEnd_02: function (req, res) {
-    sails.log('Updating the event_name in the table agent_online para the dashboard')
     let queryCompare = { agent_name: req.param('name_agent') }
     agent_online.update(queryCompare, req.allParams())
-      .then(record => {
-        return res.json(record[0])
-      })
-      .catch(err => {
-        sails.log('Error in updateFrontEnd the AngetOnlineController : ' + err)
-        return res.json(err)
-      })
+      .then(record => res.json(record[0]))
+      .catch(err => res.json(err))
+  },
+
+  updateFrontEnd: function (req, action) {
+    return new Promise((resolve, reject) => {
+      let userID = req.param('userID')
+      // let eventNextID = (req.param('eventID') === 11) ? 11 : req.param('eventNextID')
+      let eventNextID = req.param('eventNextID')
+      // let eventNextName = (req.param('eventID') === 11) ? 'Login' : req.param('eventNextName')
+      let eventNextName = req.param('eventNextName')
+      let eventID = req.param('eventID')
+      let eventAnnexed = (req.param('eventAnnexed') === 0) ? '-' : req.param('eventAnnexed')
+
+      if (action === 'updateEvent') {
+        agent_online.update({ agent_user_id: userID }, { event_name: eventNextName, event_id: eventNextID, event_id_old: eventID, agent_annexed: eventAnnexed, event_time: (new Date()).getTime() })
+        .then(record => {
+          Helper.socketDashboard(record[0])
+          resolve(record[0])
+        }).catch(err => reject(err))
+      }
+
+      if (action === 'updateNumberAnnexed') {
+        agent_online.update({ agent_user_id: userID }, {agent_annexed: eventAnnexed})
+        .then(record => {
+          Helper.socketDashboard(record[0])
+          resolve(record[0])
+        }).catch(err => reject(err))
+      }
+    })
+  },
+
+  transferUnattended: function (req, res) {
+    let transferUnattended = async (dataAgente) => {
+      let updateAgentOnline = async (dataAgente) => {
+        try {
+          let queryAgent = { select: ['event_id'], where: { agent_annexed: dataAgente.agent_annexed } }
+          let dataFindAgentOnline = await agent_online.findOne(queryAgent)
+          if (dataFindAgentOnline) {
+            if (dataFindAgentOnline.event_id !== dataAgente.event_id_old) dataAgente.event_id_old = dataFindAgentOnline.event_id
+            let queryCompare = { agent_annexed: dataAgente.agent_annexed }
+            let dataAgentOnlinePostUpdate = await agent_online.update(queryCompare, dataAgente)
+            return dataAgentOnlinePostUpdate[0]
+          }
+        } catch (err) {
+          res.json(err)
+        }
+      }
+
+      let dataTransferUnattended = {}
+      dataTransferUnattended['liberar'] = await updateAgentOnline(req.param('liberar'))
+      dataTransferUnattended['asignar'] = await updateAgentOnline(req.param('asignar'))
+      return res.json(dataTransferUnattended)
+    }
+    transferUnattended()
   }
+
 }

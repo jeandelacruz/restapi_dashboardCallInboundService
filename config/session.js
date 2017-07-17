@@ -43,7 +43,7 @@ module.exports.session = {
   *                                                                          *
   ***************************************************************************/
 
-  adapter: 'connect-redis',
+  adapter: process.env.sessionAdapter || 'adapter_session',
 
   /***************************************************************************
   *                                                                          *
@@ -54,12 +54,12 @@ module.exports.session = {
   *                                                                          *
   ***************************************************************************/
 
-  host: '127.0.0.1',
-  port: 6388,
-  ttl: 60,
+  host: process.env.sessionHost || 'localhost',
+  port: process.env.sessionPort || 6379,
+  ttl: process.env.sessionTtl || 20,
   db: 0,
-  pass: 'cosapida3slomasfacil',
-  prefix: 'sess:'
+  pass: process.env.sessionPass || 'password',
+  prefix: process.env.sessionPrefix || 'sess:'
 
   /***************************************************************************
   *                                                                          *

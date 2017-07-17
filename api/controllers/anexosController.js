@@ -5,156 +5,59 @@
  * @help        :: See http://sailsjs.org/#!/documentation/concepts/Controllers
  */
 const users = require('./usersController')
-const detalle_eventos = require('./detalle_eventosController')
-const dateFormat = require('dateformat')
 
 module.exports = {
 
-  updateAnexo: function (req, res) {
-    let anexo = req.param('number_annexed')
-    let userId = req.param('user_id')
-    let username = req.param('username')
-    let userRol = req.param('userRol')
-    anexos.find({ name: anexo })
-      .then(data => {
-        if (data.length === 0) {
-          sails.log('updateAnexo: No se encuentra el anexo ' + anexo)
-          Helper.responseMessage(res, 'error', 'No existe el anexo ' + anexo)
-        } else if (data[0].user_id === 0) {
-          anexos.update({ name: anexo }, { user_id: userId })
-          .then(record => {
-            sails.log('updateAnexo: Anexo ' + anexo + ' actualizado con exito con el usuario ' + userId)
-            console.log(userRol.toLowerCase())
-            if (userRol.toLowerCase() === 'user') {
-              Helper.socketDashboard(username, anexo, userId)
-            }
-            Helper.responseMessage(res, 'success', 'Anexo actualizado')
-          })
-          .catch(err => {
-            sails.log('updateAnexo: Error al actualizar el anexo ' + anexo + ' con el usuario ' + userId)
-            Helper.responseMessage(res, 'error', 'Error al actualizar anexo')
-          })
-        } else {
-          users.search(userId)
-          .then(data => {
-            sails.log('updateAnexo: Anexo en uso por ' + data.primer_nombre + ' ' + data.segundo_nombre + ' ' + data.apellido_paterno + ' ' + data.apellido_materno)
-            Helper.responseMessage(res, 'error', 'El Anexo ya se encuentra en uso por ' + data.primer_nombre + ' ' + data.segundo_nombre + ' ' + data.apellido_paterno + ' ' + data.apellido_materno)
-          })
-          .catch(err => {
-            sails.log('updateAnexo: Error al buscar el usuario ' + userId)
-            Helper.responseMessage(res, 'error', 'Error al buscar el usuario')
-          })
+  asignarAnexo: function (req, res) {
+    let eventAnnexed = req.param('eventAnnexed')
+
+    let asyncAsignarAnexo = async () => {
+      try {
+        let dataAnexos = await anexos.find({ name: eventAnnexed })
+        let userIDinUse = dataAnexos[0].user_id
+        if (dataAnexos.length === 0) Helper.responseMessage(res, 'error', 'No existe el anexo ' + eventAnnexed)
+        if (dataAnexos[0].user_id === 0) Helper.getPrueba(req, res, 'Anexo actualizado', '', '', '', false, true, true, false)
+        else {
+          let dataUser = await users.search(userIDinUse)
+          let nombreCompleto = dataUser.primer_nombre + ' ' + dataUser.segundo_nombre + ' ' + dataUser.apellido_paterno + ' ' + dataUser.apellido_materno
+          Helper.responseMessage(res, 'error', 'El Anexo ya se encuentra en uso por ' + nombreCompleto)
         }
-      })
-      .catch(err => {
-        sails.log('updateAnexo: Error al buscar el anexo ' + anexo)
-        Helper.getError(err)
-        .then(data => {
-          let message = ''
-          if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Error al buscar el anexo' }
-          Helper.responseMessage(res, 'error', message)
-        })
-        .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
-      })
+      } catch (err) { Helper.getError(res, err, 'Error al asignar anexo') }
+    }
+    asyncAsignarAnexo()
   },
 
-  liberarAnexo: function (req, res) {
-    let anexo = req.param('number_annexed')
-    let eventId = req.param('event_id')
-    let userId = req.param('user_id')
-    let eventName = req.param('event_name')
-    let ipCliente = req.param('ip')
+  logout: function (req, res) {
+    let asyncLogout = async () => {
+      try {
+        await Helper.getPrueba(req, res, 'Desconectado con exito', '', '', '', true, true, true, true)
+      } catch (err) { Helper.getError(res, err, 'Error al liberar anexo') }
+    }
+    asyncLogout()
+  },
+
+  update: function (req) {
+    let isAction = req.param('eventNextID')
+    let queryCompare = (isAction !== 15) ? { name: req.param('eventAnnexed') } : { user_id: req.param('userID') }
+    let remoteUserID = (isAction !== 15) ? req.param('userID') : 0
+    return new Promise((resolve, reject) => anexos.update(queryCompare, { user_id: remoteUserID }).then(data => resolve(data)).catch(err => reject(err)))
+  },
+
+  liberarAnexoOnline: function (req, res) {
+    let userID = req.param('userID')
+    let eventAnnexed = req.param('eventAnnexed')
     let username = req.param('username')
     let statusQueueRemove = req.param('statusQueueRemove')
-    anexos.update({ user_id: userId }, { user_id: 0 })
-      .then(data => {
-        if (data.length === 0) {
-          sails.log('liberarAnexo: No se encuentra el user_id : ' + userId)
-          Helper.responseMessage(res, 'error', 'No cuentas con un anexo asignado')
-        } else {
-          if (statusQueueRemove === true) {
-            Helper.addremoveQueue(userId, username, anexo, true, 'QueueRemove')
-            .then(data => {
-              let flatAction = false
-              data.forEach((array) => {
-                if (array.Response === 'Success') flatAction = true
-                if (array.Response === 'NoNotification') flatAction = true
-              })
-              if (flatAction === false) {
-                Helper.responseMessage(res, 'success', 'Se removio anexo de las colas del Asterisk', data)
-              } else {
-                Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), eventName, eventId)
-                Helper.responseMessage(res, 'success', 'Se libero el anexo correctamente', data)
-                detalle_eventos.create(eventId, userId, Helper.formatDate(new Date()), ipCliente, anexo)
-                .then(data => { })
-                .catch(err => { })
-              }
-            })
-            .catch(err => {
-              Helper.responseMessage(res, 'error', 'Al remover anexo de las colas del Asterisk')
-            })
-          } else {
-            Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), eventName, eventId)
-            sails.log('liberarAnexo: Se libero anexo con exito con el user_id : ' + userId)
-            Helper.responseMessage(res, 'success', 'Se libero el anexo correctamente')
-            detalle_eventos.create(eventId, userId, Helper.formatDate(new Date()), ipCliente, anexo)
-            .then(data => { })
-            .catch(err => { })
-          }
-        }
-      })
-      .catch(err => {
-        sails.log('liberarAnexo: Error al liberar anexo con el user_id : ' + userId)
-        Helper.getError(err)
-        .then(data => {
-          let message = ''
-          if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Error al liberar anexo' }
-          Helper.responseMessage(res, 'error', message)
-        })
-        .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
-      })
-  },
+    let dataAsterisk = []
 
-  Logout: function (req, res) {
-    let eventID = req.param('event_id')
-    let userID = req.param('user_id')
-    let ipCliente = req.param('ip')
-    let anexo = req.param('number_annexed')
-    // let fechaEvento = Helper.formatDate(new Date())
-    let fechaEvento = req.param('hour_exit')
-    anexos.update({ user_id: userID }, { user_id: 0 })
-    .then(data => {
-      detalle_eventos.create(eventID, userID, fechaEvento, ipCliente, anexo)
-      .then(data => {
-        sails.log('Logout: Se realizo la desconexion con exito - ' + userID)
-        Helper.responseMessage(res, 'success', 'Desconectado con exito')
-      })
-      .catch(err => {
-        sails.log('Logout: Error al registrar el evento')
-        Helper.responseMessage(res, 'error', 'Error al registrar el evento')
-      })
-    })
-    .catch(err => {
-      sails.log('Logout: Error al liberar anexo con el user_id : ' + userID)
-      Helper.getError(err)
-      .then(data => {
-        let message = ''
-        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Error al liberar anexo' }
-        Helper.responseMessage(res, 'error', message)
-      })
-      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
-    })
-  },
-
-  update: function (userId) {
-    return new Promise((resolve, reject) => {
-      anexos.update({ user_id: userId }, { user_id: 0 })
-      .then(data => {
-        return resolve(data)
-      })
-      .catch(err => {
-        return reject(err)
-      })
-    })
+    let asyncLiberarAnexoOnline = async () => {
+      try {
+        let dataAnexo = await anexos.update({ user_id: userID }, { user_id: 0 })
+        if (dataAnexo.length === 0) Helper.responseMessage(res, 'error', 'No cuentas con un anexo asignado')
+        if (statusQueueRemove === true) dataAsterisk = await Helper.addremoveQueue(userID, username, eventAnnexed, true, 'QueueRemove')
+        Helper.getPrueba(req, res, 'Se libero el anexo correctamente', 'Se removio anexo de las colas del Asterisk', 'success', dataAsterisk, true, true, true, false)
+      } catch (err) { Helper.getError(res, err, 'Error al liberar anexo') }
+    }
+    asyncLiberarAnexoOnline()
   }
 }

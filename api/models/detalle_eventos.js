@@ -44,6 +44,11 @@ module.exports = {
       type: 'string',
       required: true,
       defaultsTo: ''
+    },
+
+    user_rol: {
+      type: 'string',
+      defaultsTo: ''
     }
 
   },

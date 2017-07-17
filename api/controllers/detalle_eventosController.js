@@ -4,313 +4,104 @@
  * @description :: Server-side logic for managing detalle_eventos
  * @help        :: See http://sailsjs.org/#!/documentation/concepts/Controllers
  */
-const anexos = require('./anexosController')
 const eventos = require('./eventosController')
 const agentOnline = require('./agent_onlineController')
 
 module.exports = {
 
-  cambiarEstado: function (req, res) {
-    let eventID = req.param('event_id')
-    let userID = req.param('user_id')
-    let ipCliente = req.param('ip')
-    let anexo = req.param('number_annexed')
-    let username = req.param('username')
-
-    this.actionChangeStatusDashboard(eventID, anexo)
-    .then(eventos => {
-      Helper.addremoveQueue(userID, username, anexo, true, 'QueueAdd')
-      .then(data => {
-        let flatAction = false
-        data.forEach((array) => {
-          if (array.Response === 'Success') flatAction = true
-          if (array.Response === 'NoNotification') flatAction = true
-        })
-        if (flatAction === false) {
-          Helper.responseMessage(res, 'Error', 'Error al agregar al Asterisk', data)
-        } else {
-          Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), eventos.name, eventos.id)
-          this.create(eventos.id, userID, Helper.formatDate(new Date()), ipCliente, anexo).then(data => { })
-          Helper.responseMessage(res, 'success', 'Se agrego correctamente al Asterisk', data)
-        }
-      })
-      .catch(err => {
-        Helper.responseMessage(res, 'error', err)
-      })
-    })
-    .catch(err => {
-      Helper.getError(err)
-      .then(data => {
-        let message = ''
-        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Error al buscar el evento' }
-        Helper.responseMessage(res, 'error', message)
-      })
-      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
-    })
-  },
-
-  QueuePause: function (req, res) {
-    let eventID = req.param('event_id')
-    let userID = req.param('user_id')
-    let ipCliente = req.param('ip')
-    let anexo = req.param('number_annexed')
-
-    this.actionChangeStatusDashboard(eventID, anexo)
-    .then(eventos => {
-      this.actionPause(eventos, anexo)
-      .then(data => {
-        let flatAction = false
-        data.forEach((array) => {
-          if (array.Response === 'Success') flatAction = true
-          if (array.Response === 'NoNotification') flatAction = true
-        })
-        if (flatAction === false) {
-          Helper.responseMessage(res, 'Error', 'Error al pausar al agente', data)
-        } else {
-          let msjPause = 'Pausado'
-          if (eventos.estado_call_id === 1) {
-            msjPause = 'Despausado'
-          }
-          Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), eventos.name, eventos.id)
-          this.create(eventos.id, userID, Helper.formatDate(new Date()), ipCliente, anexo).then(data => { })
-          Helper.responseMessage(res, 'success', msjPause + ' correctamente')
-        }
-      })
-      .catch(err => {
-        sails.log(err)
-        Helper.responseMessage(res, 'error', err)
-      })
-    })
-    .catch(err => {
-      Helper.getError(err)
-      .then(data => {
-        let message = ''
-        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Error al buscar el evento' }
-        Helper.responseMessage(res, 'error', message)
-      })
-      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
-    })
-  },
-
   registrarDetalle: function (req, res) {
-    let eventID = req.param('event_id')
-    let userID = req.param('user_id')
-    let ipCliente = req.param('ip')
-    let anexo = req.param('number_annexed')
-    this.actionChangeStatusDashboard(eventID, anexo)
-    .then(eventos => {
-      this.create(eventos.id, userID, Helper.formatDate(new Date()), ipCliente, anexo)
-      .then(data => {
-        Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), eventos.name, eventos.id)
-        Helper.responseMessage(res, 'success', 'Evento Registrado Exitosamente')
-      })
-      .catch(err => {
-        Helper.responseMessage(res, 'error', 'Error al registrar el evento')
-      })
-    })
-    .catch(err => {
-      Helper.getError(err)
-      .then(data => {
-        let message = ''
-        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Error al buscar el evento' }
-        Helper.responseMessage(res, 'error', message)
-      })
-      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
-    })
+    let asyncRegistrarDetalle = async () => {
+      try {
+        await Helper.getPrueba(req, res, 'Evento Registrado Exitosamente', '', '', '', true, false, true, false)
+      } catch (err) { Helper.getError(res, err, 'Error al registrar eventos en la BD') }
+    }
+    asyncRegistrarDetalle()
   },
 
-  queueLogout: function (req, res) {
-    let dateExit = req.param('hour_exit')
-    let eventID = req.param('event_id')
-    let userID = req.param('user_id')
-    let ipCliente = req.param('ip')
-    let anexo = req.param('number_annexed')
+  queueAdd: function (req, res) {
+    let userID = req.param('userID')
+    let anexo = req.param('eventAnnexed')
     let username = req.param('username')
 
-    this.actionChangeStatusDashboard(eventID, anexo)
-    .then(eventos => {
-      Helper.addremoveQueue(userID, username, anexo, true, 'QueueRemove')
-      .then(data => {
-        let flatAction = false
-        data.forEach((array) => {
-          if (array.Response === 'Success') flatAction = true
-        })
-        if (flatAction === false) {
-          Helper.responseMessage(res, 'Error', 'Error al desconectar del Asterisk', data)
-        } else {
-          Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), eventos.name, eventos.id)
-          this.create(eventos.id, userID, dateExit, ipCliente, anexo)
-          .then(data => { })
-          .catch(err => { })
-          Helper.responseMessage(res, 'Success', 'Se desconecto correctamente del Asterisk', data)
-          anexos.update(userID)
-          .then(data => { })
-          .catch(err => { })
-        }
-      })
-      .catch(err => {
-        Helper.responseMessage(res, 'error', 'Usuario no cuenta con colas')
-      })
-    })
-    .catch(err => {
-      Helper.getError(err)
-      .then(data => {
-        let message = ''
-        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Error al desconectarte' }
-        Helper.responseMessage(res, 'error', message)
-      })
-      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
-    })
-  },
-
-  actionPause: function (data, anexo) {
-    return new Promise((resolve, reject) => {
-      let array = []
-      let statusPause = 1
-      if (data.estado_call_id === 1) {
-        statusPause = 0
-      }
-      let parametros = {
-        Action: 'QueuePause',
-        Interface: 'SIP/' + anexo,
-        Paused: statusPause
-      }
-
-      Helper.actionsAmi(parametros)
-      .then(data => Helper.addToArray(data, array).then(function (data) { }))
-      .catch(err => reject(err))
-
-      setTimeout(function () {
-        return resolve(array)
-      }, 2000)
-    })
-  },
-
-  actionChangeStatusDashboard: function (eventID, anexo) {
-    return new Promise((resolve, reject) => {
-      eventos.search(eventID)
-      .then(eventos => {
-        agentOnline.updateFrontEnd(anexo, eventos.name, eventos.id)
-        .then(data => resolve(eventos))
-        .catch(err => reject(err))
-      })
-      .catch(err => reject(err))
-    })
-  },
-
-  getstatus: function (req, res) {
-    console.log(sails.sockets.getId(req))
-
-    if (!req.param('user_id')) Helper.responseMessage(res, 'error', 'Parameters incompleted')
-
-    // Declaracion de variables
-    let query = {
-      select: ['evento_id'],
-      where: {user_id: req.param('user_id')},
-      sort: 'fecha_evento DESC'
+    let asyncQueueAdd = async () => {
+      try {
+        let dataAsterisk = await Helper.addremoveQueue(userID, username, anexo, true, 'QueueAdd')
+        Helper.getPrueba(req, res, 'Se agrego correctamente al Asterisk', 'Error al agregar al Asterisk', 'Error', dataAsterisk, true, false, true, false)
+      } catch (err) { Helper.getError(res, err, 'Error al liberar anexo') }
     }
-
-    /**
-    * [Buscamos el nombre del evento mediante el event_id y lo emitimos en el socket io]
-    */
-    detalle_eventos.findOne(query)
-    .then(record_findone => {
-      return eventos.search(record_findone.evento_id)
-      .then(recordEvento => {
-        Helper.socketEmmit(req.socket, 'status_agent', sails.sockets.getId(req), recordEvento.name, recordEvento.id)
-      })
-      .catch(err => {
-        Helper.responseMessage(res, 'error', 'Fail Search Event')
-      })
-    })
-    .catch(err => {
-      Helper.getError(err)
-      .then(data => {
-        let message = ''
-        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Fail Search Event' }
-        Helper.responseMessage(res, 'error', message)
-      })
-      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
-    })
+    asyncQueueAdd()
   },
 
-  register_assistence: function (req, res) {
-    if (!req.param('new_date_event') || !req.param('user_id')) Helper.responseMessage(res, 'error', 'Parameters incompleted')
+  queuePause: function (req, res) {
+    let eventStatusPause = req.param('eventStatusPause')
+    let anexo = req.param('eventAnnexed')
 
-    /**
-    * [Se verifica si existe mas de un registro (Logeo) en la BD]
-    */
-    let query = {
-      user_id: req.param('user_id'),
-      evento_id: 11
+    let asyncQueuePause = async () => {
+      try {
+        let dataAsterisk = await Helper.actionPause(eventStatusPause, anexo)
+        Helper.getPrueba(req, res, 'Pausado Correctamente', 'Error al pausar al agente', 'Error', dataAsterisk, true, false, true, false)
+      } catch (err) { Helper.getError(res, err, 'Error al Pausar/Despausar el agente') }
     }
-
-    detalle_eventos.count(query)
-    .then(recordCount => {
-      if (recordCount > 1) Helper.responseMessage(res, 'error', 'More Records')
-      /**
-      * [Extrae el 'id','fecha_evento' del primer evento de 'Login', realizado por el agente]
-      */
-      let queryFindOne = {
-        select: ['id', 'fecha_evento'],
-        where: {
-          user_id: req.param('user_id'),
-          evento_id: 11
-        },
-        sort: 'fecha_evento ASC'
-      }
-
-      detalle_eventos.findOne(queryFindOne)
-      .then(record_findone => {
-        /**
-        * [Actualiza el registro para actualización del registro de fecha_evento]
-        */
-        let parameterSearch = { id: record_findone.id }
-        let query = {
-          date_really: record_findone.fecha_evento,
-          fecha_evento: req.param('new_date_event')
-        }
-        detalle_eventos.update(parameterSearch, query)
-        .then(record_update => {
-          Helper.responseMessage(res, 'success', 'Updated Event')
-        })
-        .catch(err => {
-          Helper.responseMessage(res, 'error', 'Fail Updated Event')
-        })
-      })
-      .catch(err => {
-        Helper.responseMessage(res, 'error', 'Fail Search Event')
-      })
-    })
-    .catch(err => {
-      Helper.getError(err)
-      .then(data => {
-        let message = ''
-        if (data === false) { message = 'Acceso Denegado a la BD' } else { message = 'Fail Count Records' }
-        Helper.responseMessage(res, 'error', message)
-      })
-      .catch(err => { Helper.responseMessage(res, 'error', 'Error al conectar al MySQL') })
-    })
+    asyncQueuePause()
   },
 
-  create: function (evento_id, user_id, fecha_evento, ip_cliente, anexo = 0) {
+  queueRemove: function (req, res) {
+    let userID = req.param('userID')
+    let anexo = req.param('eventAnnexed')
+    let username = req.param('username')
+
+    let asyncQueueRemove = async () => {
+      try {
+        let dataAsterisk = await Helper.addremoveQueue(userID, username, anexo, true, 'QueueRemove')
+        Helper.getPrueba(req, res, 'Se desconecto correctamente del Asterisk', 'Error al desconectar del Asterisk', 'Error', dataAsterisk, true, true, true, true)
+      } catch (err) { Helper.getError(res, err, 'Error al Desconectar de las Colas al agente') }
+    }
+    asyncQueueRemove()
+  },
+
+  getStatusActual: function (req, res) {
+    let asyncGetStatus = async () => {
+      try {
+        let query = await Helper.getParameters(req, 'getstatus')
+        let dataDetailEvent = await detalle_eventos.findOne(query)
+        let dataEvent = await eventos.search(dataDetailEvent.evento_id)
+        if (eventos) Helper.socketEmmit(req.socket, 'statusSails', sails.sockets.getId(req), dataEvent.name, dataEvent.id)
+        else Helper.responseMessage(res, 'error', 'No se pudo obtener el evento actual del usuario.')
+      } catch (err) { Helper.getError(res, err, 'Error al Obtener el Estado Actual del Agente') }
+    }
+    asyncGetStatus()
+  },
+
+  registerAssistence: function (req, res) {
+    let asyncRegisterAssistence = async () => {
+      try {
+        let parametersCountRegisterLogin = Helper.getParameters(req, 'countRegisterLogin')
+        let recordCount = await detalle_eventos.count(parametersCountRegisterLogin)
+        if (recordCount > 1) Helper.responseMessage(res, 'error', 'More Records')
+        let parametersFirstRegisterLogin = Helper.getParameters(req, 'getIdFirstRegisterLogin')
+        let recordFindone = await detalle_eventos.findOne(parametersFirstRegisterLogin)
+        let parameterSearch = { id: recordFindone.id }
+        let query = Helper.getParameters(req, 'updateHourLogin', recordFindone)
+        await detalle_eventos.update(parameterSearch, query)
+        await Helper.getPrueba(req, res, 'Hora de Entrada Registrada Exitosamente', '', '', '', false, false, false, false)
+      } catch (err) { Helper.getError(res, err, 'Error al Registrar la Asistencia del Agente') }
+    }
+    asyncRegisterAssistence()
+  },
+
+  create: function (eventNextID, userID, userRol, eventFechaHora, eventDateReally, eventIPCliente, eventAnnexed) {
     return new Promise((resolve, reject) => {
       let valuesEvent = {
-        evento_id: evento_id,
-        user_id: user_id,
-        fecha_evento: fecha_evento,
-        ip_cliente: ip_cliente,
+        evento_id: eventNextID,
+        user_id: userID,
+        fecha_evento: eventFechaHora,
+        date_really: eventDateReally,
+        ip_cliente: eventIPCliente,
         observaciones: '',
-        anexo: anexo,
-        date_really: Helper.formatDate(new Date())
+        anexo: eventAnnexed,
+        user_rol: userRol
       }
-      detalle_eventos.create(valuesEvent)
-      .then(data => {
-        return resolve(data)
-      })
-      .catch(err => {
-        return reject(err)
-      })
+      detalle_eventos.create(valuesEvent).then(data => resolve(data)).catch(err => reject(err))
     })
   },
 
@@ -325,8 +116,7 @@ module.exports = {
       date_really: Helper.formatDate(new Date())
     }
 
-    detalle_eventos.create(valuesEvent)
-      .then(data => Helper.responseMessage(res, 'success', 'Evento Creado correctamente'))
-      .catch(err => Helper.responseMessage(res, 'error', err))
+    detalle_eventos.create(valuesEvent).then(data => Helper.responseMessage(res, 'success', 'Evento Creado correctamente'))
+    .catch(err => Helper.responseMessage(res, 'error', err))
   }
 }
