@@ -54,10 +54,18 @@ module.exports = {
 
     let asyncLiberarAnexoOnline = async () => {
       try {
-        let dataAnexo = await anexos.update({ user_id: userID }, { user_id: 0 })
-        if (dataAnexo.length === 0) Helper.responseMessage(res, 'error', 'No cuentas con un anexo asignado')
-        if (statusQueueRemove === true) dataAsterisk = await Helper.addremoveQueue(userID, username, eventAnnexed, true, 'QueueRemove')
-        Helper.getPrueba(req, res, 'Se libero el anexo correctamente', 'Se removio anexo de las colas del Asterisk', 'success', dataAsterisk, true, true, true, false)
+        const dataAnexo = await anexos.update({ user_id: userID }, { user_id: 0 })
+        if (dataAnexo) {
+          let anexoToLiberar = dataAnexo[0].name
+          console.log('aaaaaaaaaaa')
+          console.log(dataAnexo)
+          console.log(anexoToLiberar)
+          if (dataAnexo.length === 0) Helper.responseMessage(res, 'error', 'No cuentas con un anexo asignado')
+          if (statusQueueRemove === true) dataAsterisk = await Helper.addremoveQueue(userID, username, anexoToLiberar, true, 'QueueRemove')
+          Helper.getPrueba(req, res, 'Se libero el anexo correctamente', 'Se removio anexo de las colas del Asterisk', 'success', dataAsterisk, true, true, true, false)
+        } else {
+          Helper.responseMessage(res, 'error', 'Problemas para liberar el anexo')
+        }
       } catch (err) { Helper.getError(res, err, 'Error al liberar anexo') }
     }
     asyncLiberarAnexoOnline()
