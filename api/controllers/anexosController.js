@@ -16,10 +16,12 @@ module.exports = {
         let dataAnexos = await anexos.find({ name: eventAnnexed })
         let userIDinUse = dataAnexos[0].user_id
         if (dataAnexos.length === 0) Helper.responseMessage(res, 'error', 'No existe el anexo ' + eventAnnexed)
-        if (dataAnexos[0].user_id === 0) Helper.getPrueba(req, res, 'Anexo actualizado', '', '', '', false, true, true, false)
-        else {
+        if (dataAnexos[0].user_id === 0) {
+          let Prueba = Helper.getPrueba(req, res, 'Anexo actualizado', '', '', '', false, true, true, false)
+        } else {
           let dataUser = await users.search(userIDinUse)
-          let nombreCompleto = dataUser.primer_nombre + ' ' + dataUser.segundo_nombre + ' ' + dataUser.apellido_paterno + ' ' + dataUser.apellido_materno
+          let nombreCompleto = 'Nombre Desconocido'
+          if (dataUser) nombreCompleto = dataUser.primer_nombre + ' ' + dataUser.apellido_paterno + ' ' + dataUser.apellido_materno
           Helper.responseMessage(res, 'error', 'El Anexo ya se encuentra en uso por ' + nombreCompleto)
         }
       } catch (err) { Helper.getError(res, err, 'Error al asignar anexo') }
