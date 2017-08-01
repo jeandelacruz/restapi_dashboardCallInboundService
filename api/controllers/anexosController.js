@@ -58,7 +58,7 @@ module.exports = {
         if (dataAnexo) {
           if (dataAnexo.length === 0) Helper.responseMessage(res, 'error', 'No cuentas con un anexo asignado')
           if (statusQueueRemove === true) dataAsterisk = await Helper.addremoveQueue(userID, username, dataAnexo[0].name, true, 'QueueRemove')
-          Helper.getPrueba(req, res, 'Se libero el anexo correctamente', 'Se removio anexo de las colas del Asterisk', 'success', dataAsterisk, true, true, true, false)
+          Helper.getPrueba(req, res, 'Se libero el anexo correctamente', 'Se removio anexo de las colas del Asterisk', 'success', dataAsterisk, true, false, true, false)
         } else {
           Helper.responseMessage(res, 'error', 'Problemas para liberar el anexo')
         }
