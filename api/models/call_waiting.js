@@ -6,25 +6,12 @@
  */
 
 module.exports = {
-
   attributes: {
-
-    number_phone: {
-      type: 'string'
-    },
-
-    name_number: {
-      type: 'string'
-    },
-
-    name_queue: {
-      type: 'string'
-    },
-
-    start_call: {
-      type: 'string'
-    }
-
+    number_phone: { type: 'string' },
+    name_proyect: { type: 'string' },
+    name_number: { type: 'string' },
+    name_queue: { type: 'string' },
+    start_call: { type: 'string' }
   },
 
   autoCreatedAt: false,
