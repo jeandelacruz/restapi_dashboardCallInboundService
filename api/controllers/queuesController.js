@@ -11,5 +11,14 @@ module.exports = {
       .then(record => resolve(record))
       .catch(err => reject(err))
     })
+  },
+  queuesReload: function(req, res) {
+    let asyncQueueReload = async () => {
+      try {
+        await Helper.actionsAmi({ Action: 'QueueReload'})
+        Helper.responseMessage(res, 'success', 'Se actualizaron las colas en el Asterisk')
+      } catch (err) { Helper.getError(res, err, 'No se pudo actualizar las colas en el Asterisk') }
+    }
+    asyncQueueReload()
   }
 }
