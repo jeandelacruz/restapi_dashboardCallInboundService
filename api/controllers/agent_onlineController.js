@@ -9,17 +9,47 @@ module.exports = {
 
   search: function (req, res) {
     let queryAgent = { where: { agent_annexed: req.param('agent_annexed') } }
-    agent_online.findOne(queryAgent).then(record => res.json(record))
+    agent_online.findOne(queryAgent).then(record => {
+      res.json(record)
+    })
     .catch(err => res.json(err))
   },
 
   searchAndUpdate: function (req, res) {
-    let queryAgent = { select: ['event_id'], where: { agent_annexed: req.param('agent_annexed') } }
+    let queryAgent = { select: ['event_id', 'event_id_old', 'second_status_call'], where: { agent_annexed: req.param('agent_annexed') } }
     agent_online.findOne(queryAgent)
     .then(record => {
       let queryCompare = {agent_annexed: req.param('agent_annexed')}
       let dataUpdate = req.allParams()
-      if (record.event_id !== dataUpdate.event_id_old) dataUpdate.event_id_old = record.event_id
+      /**
+       * [Se valida la condicional, si existe o no una segunda llamada.
+       * - Si existe se valida el estado de la segunda llamada en la BD,
+       *   como tambien se valida si se desea cambiar el estado principal y el antiguo.
+       * - Si no envia en el campo del evento anterior, el actual de la BD.]
+       */
+      if(dataUpdate.second_status_call === '0'){
+        /**
+         * [Se valida la condicional, si existe un corte de una segunda llamada.
+         * Este no actualizara ningun dato de la primera llamada (Saliente)]
+         */
+        if(dataUpdate.second_outbound_phone === '') {
+          if (record.event_id !== dataUpdate.event_id_old) {
+            dataUpdate.event_id_old = record.event_id
+            if(dataUpdate.changeSecondStatusCall === '1') dataUpdate.second_status_call = '0'
+          }
+        }
+      } else {
+        if(record.second_status_call === 1 && dataUpdate.changeEventPrimary === '1') {
+            dataUpdate.event_id = record.event_id_old
+            dataUpdate.event_id_old = record.event_id
+            if(dataUpdate.changeSecondStatusCall === '1') dataUpdate.second_status_call = '0'
+        } else {
+          if(dataUpdate.second_event_id === '20' && dataUpdate.second_status_call === 1) dataUpdate.event_id_old = '23'
+            else if(dataUpdate.second_event_id === '19' && dataUpdate.second_status_call === 1) dataUpdate.event_id_old = '22'
+              else dataUpdate.event_id_old = record.event_id_old
+          if(dataUpdate.changeSecondStatusCall === '1') dataUpdate.second_status_call = '0'
+        } 
+      }
       agent_online.update(queryCompare, dataUpdate)
       .then(data => {
         data[0].total_call = 0
@@ -65,15 +95,12 @@ module.exports = {
   updateFrontEnd: function (req, action) {
     return new Promise((resolve, reject) => {
       let userID = req.param('userID')
-      // let eventNextID = (req.param('eventID') === 11) ? 11 : req.param('eventNextID')
       let eventNextID = req.param('eventNextID')
-      // let eventNextName = (req.param('eventID') === 11) ? 'Login' : req.param('eventNextName')
-      let eventNextName = req.param('eventNextName')
       let eventID = req.param('eventID')
       let eventAnnexed = (req.param('eventAnnexed') === 0) ? '-' : req.param('eventAnnexed')
 
       if (action === 'updateEvent') {
-        agent_online.update({ agent_user_id: userID }, { event_name: eventNextName, event_id: eventNextID, event_id_old: eventID, agent_annexed: eventAnnexed, event_time: (new Date()).getTime() })
+        agent_online.update({ agent_user_id: userID }, { event_id: eventNextID, event_id_old: eventID, agent_annexed: eventAnnexed, event_time: (new Date()).getTime() })
         .then(record => {
           Helper.socketDashboard(record[0])
           resolve(record[0])
