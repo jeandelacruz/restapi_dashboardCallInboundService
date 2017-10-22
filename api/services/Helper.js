@@ -21,6 +21,7 @@ module.exports = {
 
   socketDashboard: function (dataAgentsOnline) {
     const socketAsterisk = iosocket.connect(process.env.dashboardHost + ':' + process.env.dashboardPort, { 'forceNew': true })
+    dataAgentsOnline.nameProyect = process.env.nameProyect
     socketAsterisk.emit('updateDataDashboard', dataAgentsOnline)
   },
 
