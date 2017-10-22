@@ -36,10 +36,11 @@ module.exports = {
     let eventStatusPause = req.param('eventStatusPause')
     let anexo = req.param('eventAnnexed')
 
+    let mensaje = (eventStatusPause === 1) ? 'Despausado Correctamente' : 'Pausado Correctamente'
     let asyncQueuePause = async () => {
       try {
         let dataAsterisk = await Helper.actionPause(eventStatusPause, anexo)
-        Helper.getPrueba(req, res, 'Pausado Correctamente', 'Error al pausar al agente', 'Error', dataAsterisk, true, false, true, false)
+        Helper.getPrueba(req, res, mensaje, 'Error al pausar al agente', 'Error', dataAsterisk, true, false, true, false)
       } catch (err) { Helper.getError(res, err, 'Error al Pausar/Despausar el agente') }
     }
     asyncQueuePause()
@@ -116,7 +117,9 @@ module.exports = {
       date_really: Helper.formatDate(new Date())
     }
 
-    detalle_eventos.create(valuesEvent).then(data => Helper.responseMessage(res, 'success', 'Evento Creado correctamente'))
+    detalle_eventos.create(valuesEvent).then(data => {
+      Helper.responseMessage(res, 'success', 'Evento Creado correctamente')
+    })
     .catch(err => Helper.responseMessage(res, 'error', err))
   }
 }
