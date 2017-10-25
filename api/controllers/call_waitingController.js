@@ -6,11 +6,12 @@
  */
 module.exports = {
   deleteCallWaiting: function (req, res) {
-    let query = {number_phone: req.param('number_phone')}
+    let query = {unique_id : req.param('unique_id')}
     call_waiting.destroy(query)
     .then(data => {
       const values = {
         'name_proyect': data[0].name_proyect,
+        'start_call' : data[0].start_call,
         'number_phone': data[0].number_phone
       }
 
@@ -25,6 +26,7 @@ module.exports = {
       name_number: req.param('name_number'),
       name_queue: req.param('name_queue'),
       start_call: req.param('start_call'),
+      unique_id: req.param('unique_id'),
       name_proyect: process.env.nameProyect
     }
 

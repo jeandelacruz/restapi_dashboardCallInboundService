@@ -11,7 +11,8 @@ module.exports = {
     name_proyect: { type: 'string' },
     name_number: { type: 'string' },
     name_queue: { type: 'string' },
-    start_call: { type: 'string' }
+    start_call: { type: 'string' },
+    unique_id: { type: 'string' }
   },
 
   autoCreatedAt: false,
