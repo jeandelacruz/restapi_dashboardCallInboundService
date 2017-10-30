@@ -11,7 +11,7 @@ module.exports = {
     .then(data => {
       const values = {
         'name_proyect': data[0].name_proyect,
-        'start_call' : data[0].start_call,
+        'unique_id' : data[0].unique_id,
         'number_phone': data[0].number_phone
       }
 
@@ -30,7 +30,6 @@ module.exports = {
       name_proyect: process.env.nameProyect
     }
 
-    console.log(values)
     call_waiting.create(values).then(data => res.json(data)).catch(err => res.json(err))
   }
 }
