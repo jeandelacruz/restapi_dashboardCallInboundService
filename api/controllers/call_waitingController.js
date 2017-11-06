@@ -20,6 +20,14 @@ module.exports = {
     .catch(err => res.json(err))
   },
 
+  deleteAllCallWaiting: function (req, res) {
+      call_waiting.destroy({})
+      .then(data => {
+        res.json(data)
+      })
+      .catch(err => res.json(err))
+  },
+
   createCallWaiting: function (req, res) {
     let values = {
       number_phone: req.param('number_phone'),
