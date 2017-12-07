@@ -14,6 +14,16 @@ module.exports = {
       required: true
     },
 
+    allowed_calls: {
+      type: 'integer',
+      required: false
+    },
+
+    status_hangup: {
+      type: 'integer',
+      required: false
+    },
+
     estado_call_id: {
       type: 'integer',
       required: true

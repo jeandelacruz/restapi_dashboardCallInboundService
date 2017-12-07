@@ -29,7 +29,8 @@ module.exports = {
     second_event_id: { type: 'string' },
     timeElapsed: { type: 'string' },
     transfer: { type: 'string' },
-    event_observaciones: { type: 'string' }
+    event_observaciones: { type: 'string' },
+    event_hangup: { type: 'string' }
   },
 
   autoCreatedAt: false,
