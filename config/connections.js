@@ -43,6 +43,7 @@ module.exports.connections = {
   someMysqlServer: {
     adapter: process.env.bdAdapter || 'sails-sqllite',
     host: process.env.bdHost || 'localhost',
+    port: process.env.bdPort || '3306',
     user: process.env.bdUser || 'user',
     password: process.env.bdPassword || 'password',
     charset: process.env.bdCharset || 'utf8',
