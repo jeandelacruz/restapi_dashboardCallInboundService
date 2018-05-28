@@ -4,6 +4,7 @@
  * @description :: Server-side logic for managing agent_onlines
  * @help        :: See http://sailsjs.org/#!/documentation/concepts/Controllers
  */
+const eventos = require('./eventosController')
 
 module.exports = {
 
@@ -50,6 +51,7 @@ module.exports = {
           if(dataUpdate.changeSecondStatusCall === '1') dataUpdate.second_status_call = '0'
         } 
       }
+
       agent_online.update(queryCompare, dataUpdate)
       .then(data => {
         data[0].total_call = 0
@@ -98,13 +100,18 @@ module.exports = {
       let eventNextID = req.param('eventNextID')
       let eventID = req.param('eventID')
       let eventAnnexed = (req.param('eventAnnexed') === 0) ? '-' : req.param('eventAnnexed')
+      let eventHangup = 1
 
       if (action === 'updateEvent') {
-        agent_online.update({ agent_user_id: userID }, { event_id: eventNextID, event_id_old: eventID, agent_annexed: eventAnnexed, event_time: (new Date()).getTime() })
-        .then(record => {
-          Helper.socketDashboard(record[0])
-          resolve(record[0])
-        }).catch(err => reject(err))
+      	let eventoSearch = eventos.search(eventNextID)
+      	eventoSearch.then((resultEvent) => {
+      		eventHangup = (resultEvent.status_hangup === '1') ? eventNextID : 1
+  			agent_online.update({ agent_user_id: userID }, { event_id: eventNextID, event_id_old: eventID, agent_annexed: eventAnnexed, event_time: (new Date()).getTime(), event_hangup: eventHangup })
+	        .then(record => {
+	          Helper.socketDashboard(record[0])
+	          resolve(record[0])
+	        }).catch(err => reject(err))
+      	})
       }
 
       if (action === 'updateNumberAnnexed') {
