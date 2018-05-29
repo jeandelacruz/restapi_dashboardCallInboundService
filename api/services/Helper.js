@@ -121,7 +121,6 @@ module.exports = {
   actionAsterisk: function (typeActionACD, queueID, action, anexo, username, priority = 1) {
     return new Promise((resolve, reject) => {
       let parametros = ''
-      console.log('Parametros para actionAsterisk : ' + queueID + '-' + action + '-' + anexo + '-' + username)
       queues.search(queueID)
       .then(data => {
         if (typeActionACD) {
@@ -173,8 +172,7 @@ module.exports = {
   },
 
   getError: function (res, err, msj) {
-    console.log('mensaje de error')
-    console.log(err)
+    console.error(err)
     let error = err.details
     let array = error.split(':')
     let isConectionBD = true
