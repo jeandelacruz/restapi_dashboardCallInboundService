@@ -15,6 +15,10 @@ module.exports = {
     return dateFormat(date, 'yyyy-mm-dd H:MM:ss')
   },
 
+  internalServer: function (response, message) {
+    return response.status(412).send(message)
+  },
+
   responseMessage: function (response, status, message, dataqueue = null) {
     return response.json({ Response: status.toLowerCase(), Message: message, DataQueue: dataqueue })
   },

@@ -29,6 +29,14 @@ module.exports = {
   },
 
   createCallWaiting: function (req, res) {
+
+    if (typeof (req.param('number_phone')) === 'undefined') return Helper.internalServer(res, 'Lo sentimos, el number_phone no puede estar vacío!')
+    if (typeof (req.param('name_number')) === 'undefined') return Helper.internalServer(res, 'Lo sentimos, el name_number no puede estar vacío!')
+    if (typeof (req.param('name_queue')) === 'undefined') return Helper.internalServer(res, 'Lo sentimos, el name_queue no puede estar vacío!')
+    if (typeof (req.param('start_call')) === 'undefined') return Helper.internalServer(res, 'Lo sentimos, el start_call no puede estar vacío!')
+    if (typeof (req.param('unique_id')) === 'undefined') return Helper.internalServer(res, 'Lo sentimos, el unique_id no puede estar vacío!')
+    if (typeof (process.env.nameProyect) === 'undefined') return Helper.internalServer(res, 'Lo sentimos, el name_Proyect no puede estar vacío!')
+
     let values = {
       number_phone: req.param('number_phone'),
       name_number: req.param('name_number'),
