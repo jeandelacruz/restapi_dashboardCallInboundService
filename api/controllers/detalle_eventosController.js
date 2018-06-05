@@ -107,6 +107,13 @@ module.exports = {
   },
 
   createEvent: function (req, res) {
+    if (typeof (req.param('event_id')) === 'undefined') return Helper.internalServer(res, 'Lo sentimos, el event_id no puede estar vacío!')
+    if (typeof (req.param('agent_user_id')) === 'undefined') return Helper.internalServer(res, 'Lo sentimos, el agent_user_id no puede estar vacío!')
+    if (typeof (req.param('event_time')) === 'undefined') return Helper.internalServer(res, 'Lo sentimos, el event_time no puede estar vacío!')
+    if (typeof (req.param('ip')) === 'undefined') return Helper.internalServer(res, 'Lo sentimos, el ip no puede estar vacío!')
+    if (typeof (req.param('event_observaciones')) === 'undefined') return Helper.internalServer(res, 'Lo sentimos, el event_observaciones no puede estar vacío!')
+    if (typeof (req.param('agent_annexed')) === 'undefined') return Helper.internalServer(res, 'Lo sentimos, el agent_annexed no puede estar vacío!')
+
     let valuesEvent = {
       evento_id: req.param('event_id'),
       user_id: req.param('agent_user_id'),

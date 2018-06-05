@@ -17,15 +17,13 @@ module.exports = {
 
       res.json(values)
     })
-    .catch(err => res.json(err))
+    .catch(err => Helper.responseMessage(res, 'error', err))
   },
 
   deleteAllCallWaiting: function (req, res) {
       call_waiting.destroy({})
-      .then(data => {
-        res.json(data)
-      })
-      .catch(err => res.json(err))
+      .then(data => res.json(data))
+      .catch(err => Helper.responseMessage(res, 'error', err))
   },
 
   createCallWaiting: function (req, res) {
@@ -46,6 +44,6 @@ module.exports = {
       name_proyect: process.env.nameProyect
     }
 
-    call_waiting.create(values).then(data => res.json(data)).catch(err => res.json(err))
+    call_waiting.create(values).then(data => res.json(data)).catch(err => Helper.responseMessage(res, 'error', err))
   }
 }
